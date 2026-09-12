@@ -1,0 +1,93 @@
+\documentclass{article}
+\title{Modelado y Programación, Proyecto 1: Chat}
+\author{Mayté García Franco}
+\date{Septiembre 2026}
+\begin{document}
+
+\maketitle
+
+\section{Introducción}
+
+\section{Análisis}
+
+\subsection{Investigación de Cliente-Servidor}
+El servidor espera la petición del cliente por un puerto específico. Cuando el cliente realice la petición, el servidor abrirá una conexión. Esta petición se hace por un puerto previamente establecido y, en caso de ser aceptada, se crea una conexión donde el servidor y el cliente pueden intercambiar información.
+
+\subsubsection{Puertos}
+Existen 65535 puertos disponibles para cada dirección IP. Sin embargo, hay algunos que están prohibidos usar ya que están designados a servicios del sistema. Estos serían los puertos del 0 al 1023 ya que están reservados para procesos del sistema. Los puertos del 1024 al 49151 pueden usarse libremente al igual que los puertos del 49152 al 65535, solo que estos últimos son de tipo temporal.
+
+\subsubsection{Sockets}
+Un socket nos va a permitir la comunicación bidireccional entre procesos a través de la red. Veamos como funcionan los sockets de acuerdo al modelo cliente-servidor:
+
+Servidor:
+\begin{itemize}
+  \item Creación del socket: el servidor crea un socket y lo asocia a una dirección IP y un número de puerto específico.
+  \item Escucha: el socket del servidor espera conexiones entrantes de clientes.
+  \item Aceptación de conexiones: cuando un cliente intenta conectarse, el servudor puede aceptar la conexión. 
+\end{itemize}
+
+Cliente:
+
+\begin{itemize}
+  \item Creación del socket: el cliente crea un socket sin asociarlo a una dirección específica.
+  \item Conexión al servidor: el socket del cliente intenta conectarse al socket del servidor utilizando la dirección IP y el puerto del servidor.
+  \item Comunicación: ya establecida la conexión, hay una comunicación bilateral. 
+\end{itemize}
+
+\subsection{División del problema}
+
+Ya con un conocimiento básico de cómo debería funcionar el Cliente y el Servidor junto con el protocolo, lo siguiente es realizar el famoso ``divide y vencerás''. 
+
+Para el servidor tendríamos lo siguiente:
+
+\begin{itemize}
+  \item Usuarios
+  \begin{itemize}
+    \item Identifica
+    \item Cambia status
+    \item Agregar a sala
+    \item Desconecta
+  \end{itemize}
+  \item Mensajes
+  \begin{itemize}
+    \item Recibe mensaje
+    \item Envía mensaje
+  \end{itemize}
+  \item Salas
+  \begin{itemize}
+    \item Crear sala
+    \item Invitar usuario
+    \item Agregar usuario
+    \item Lista de usuarios
+  \end{itemize}
+\end{itemize}
+
+Para el cliente tendríamos lo siguiente:
+
+\begin{itemize}
+  \item Mensajes
+  \begin{itemize}
+    \item Recibe mensaje
+    \item Manda mensaje
+  \end{itemize}
+  \item Salas
+  \begin{itemize}
+    \item Crear sala
+    \item Invitar usuario
+    \item Aceptar invitación
+    \item Abandonar sala
+    \item Ver lista de usuarios
+  \end{itemize}
+  \item Cambiar status
+  \item Abandonar servidor
+\end{itemize}
+
+\section{Modelado}
+
+\section{Bibliografía}
+https://repositorio-uapa.cuaed.unam.mx/repositorio/moodle/pluginfile.php/3064/mod_resource/content/1/UAPA-Sockets/index.html
+
+https://onmex.mx/tecnologia-y-desarrollo/que-es-un-socket/
+
+
+\end{document}
