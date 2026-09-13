@@ -1,0 +1,11 @@
+version: '3'
+
+tasks:
+  servidor:
+    desc: Compila y ejecuta el programa Servidor
+    cmds:
+      - go build src/main/Modelo/Servidor.go
+      - go run src/main/Modelo/Servidor.go
+      - rm -rf bin
+      - rm -rf Servidor
+    silent: true 
