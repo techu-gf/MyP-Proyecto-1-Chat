@@ -1,4 +1,6 @@
 \documentclass{article}
+\usepackage {graphicx}
+\graphicspath{ {images/} }
 \title{Modelado y Programación, Proyecto 1: Chat}
 \author{Mayté García Franco}
 \date{Septiembre 2026}
@@ -45,7 +47,6 @@ Para el servidor tendríamos lo siguiente:
   \begin{itemize}
     \item Identifica
     \item Cambia status
-    \item Agregar a sala
     \item Desconecta
   \end{itemize}
   \item Mensajes
@@ -58,6 +59,7 @@ Para el servidor tendríamos lo siguiente:
     \item Crear sala
     \item Invitar usuario
     \item Agregar usuario
+    \item Eliminar usuario
     \item Lista de usuarios
   \end{itemize}
 \end{itemize}
@@ -83,6 +85,22 @@ Para el cliente tendríamos lo siguiente:
 \end{itemize}
 
 \section{Modelado}
+
+\subsection{Paradigma}
+
+Se optó por usar el paradigma de Orientado a Objetos. Este paradigma nos ayudará a tener claras las funciones que llevan a cabo tanto el cliente como el servidor, logrando que lo que haga cada uno no se mezcle. 
+
+\subsection{Diseño de clases}
+
+\includegraphics[scale = 0.3]{Modelado_Chat.jpg}
+
+\subsection{Lenguajes de Programación y Sistemas de Construcción}
+
+Para este proyecto se decidió programar el servidor en \textbf{Go} debido a la gran ventaja que nos brindan las Gorutines. De igual forma, su recolector de basura ayudará a facilitar el manejo del servidor y los recursos que pueda utilizar.
+
+Del lado del cliente se decidió que se programará en \textbf{C#} ya que tiene un recolector de basura que trabaja de forma más ``entendible'' o, desde mi punto de vista, interesante a comparación de C o C++. Otro punto a favor de C# es que se caracteriza por ser orientado a objetos, por lo que me facilitará un poco más la impementación de este.
+
+En cuanto al sistema de construcción, se usará Taskfile.
 
 \section{Bibliografía}
 https://repositorio-uapa.cuaed.unam.mx/repositorio/moodle/pluginfile.php/3064/mod_resource/content/1/UAPA-Sockets/index.html
