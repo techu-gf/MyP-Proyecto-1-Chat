@@ -1,11 +1,18 @@
 version: '3'
 
 tasks:
-  servidor:
-    desc: Compila y ejecuta el programa Servidor
+  test_servidor:
+    desc: Ejecuta los test para Servidor
     cmds:
-      - go build src/main/Modelo/Servidor.go
+      - go run src/test/Servidor_test.go
+      - rm -rf bin
+      - rm -rf Servidor_test
+    silent: true
+    
+  servidor:
+    desc: Ejecuta el servidor
+    cmds:
       - go run src/main/Modelo/Servidor.go
       - rm -rf bin
-      - rm -rf Servidor
+      - rm -rf EjecutaServidor
     silent: true 
