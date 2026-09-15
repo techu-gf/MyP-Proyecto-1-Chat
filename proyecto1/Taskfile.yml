@@ -11,4 +11,10 @@ tasks:
     desc: Ejecuta el servidor
     cmds:
       - go run src/main/Modelo/EjecutaServidor.go {{.CLI_ARGS}}
+    silent: true
+
+  test_mensaje:
+    desc: Ejecuta los test para Mensaje
+    cmds:
+      - go test ./src/main/Modelo/Mensaje/... -v
     silent: true 
