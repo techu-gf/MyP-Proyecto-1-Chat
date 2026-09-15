@@ -4,15 +4,11 @@ tasks:
   test_servidor:
     desc: Ejecuta los test para Servidor
     cmds:
-      - go run src/test/Servidor_test.go
-      - rm -rf bin
-      - rm -rf Servidor_test
+      - go test ./src/main/Modelo/Servidor/... -v
     silent: true
     
   servidor:
     desc: Ejecuta el servidor
     cmds:
-      - go run src/main/Modelo/Servidor.go
-      - rm -rf bin
-      - rm -rf EjecutaServidor
+      - go run src/main/Modelo/EjecutaServidor.go {{.CLI_ARGS}}
     silent: true 
