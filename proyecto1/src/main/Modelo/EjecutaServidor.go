@@ -33,6 +33,6 @@ func main() {
 			continue
 		}
 
-		go serv.HiloCliente(conn)
+		go serv.ProcesoCliente(conn)
 	}
 }
