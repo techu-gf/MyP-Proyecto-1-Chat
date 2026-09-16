@@ -3,6 +3,8 @@ package controlador
 import (
 	"encoding/json"
 	"fmt"
+	"net"
+	"strings"
 	"chat/src/main/Modelo/Mensaje"
 	"chat/src/main/Modelo/Servidor"
 )
@@ -45,19 +47,59 @@ func (ctrl *Controlador)MensajeSinJSON(datosJson []byte)(*mensaje.Mensaje, error
 
 //Verifica que el mensaje tenga lo necesario y lo pasa al servidor para 
 //que haga la acción solicitada
-func (ctrl *Controlador)ProcesaMensaje(msg *mensaje.Mensaje) error{
+func (ctrl *Controlador)ProcesaMensaje(msg *mensaje.Mensaje, conn net.Conn, usuario string)(string, error){
 	if msg == nil || !msg.EsValido(){
-		return fmt.Errorf("Mensaje inválido")
+		ctrl.OperacionInvalida(conn, "INVALID")
+		return "", fmt.Errorf("Mensaje inválido")
 	}
 
-	server := ctrl.serv
+	tipo := msg.GetTipo()
 
-	switch msg.GetTipo(){
+	if usuario == "" && tipo != "IDENTIFY"{
+		ctrl.OperacionInvalida(conn, "NOT_IDENTIFIED")
+		return "", fmt.Errorf("El usuario intentó actuar sin haberse identificado.")
+	}
+
+	switch tipo{
 		case "IDENTIFY":
-		server.IdentificaUsuario(msg.GetUsername())
-		default:
-		return fmt.Errorf("Tipo de mensaje inválido: %s", msg.GetTipo())
-	}
+		username := msg.GetUsername()
 
-	return nil
+		if(strings.TrimSpace(username) == ""){
+			ctrl.OperacionInvalida(conn, "INVALID")
+			return "", fmt.Errorf("Usuario nulo.")
+		}
+		
+		err := ctrl.serv.IdentificaUsuario(username, conn)
+
+		var respuesta *mensaje.Mensaje
+		
+		if err != nil{
+			respuesta = mensaje.CrearMensajeResponse("IDENTIFY", "USER_ALREADY_EXISTS", username)
+			bytesRespuesta, _ := ctrl.MensajeAJSON(respuesta)
+			ctrl.EnviarBytes(conn, bytesRespuesta)
+			return "", err
+		}
+		
+		respuesta = mensaje.CrearMensajeResponse("IDENTIFY", "SUCCESS", username)
+		bytesRespuesta, _ := ctrl.MensajeAJSON(respuesta)
+		ctrl.EnviarBytes(conn, bytesRespuesta)
+		return username, err
+		
+		default:
+		ctrl.OperacionInvalida(conn, "INVALID")
+		return "", fmt.Errorf("Tipo de mensaje inválido.")
+	}
+}
+
+func (ctrl *Controlador)OperacionInvalida(conn net.Conn, resultado string){
+	respuesta := mensaje.CrearMensajeResponse("INVALID", resultado, "")
+	bytesRespuesta,_ := ctrl.MensajeAJSON(respuesta)
+	ctrl.EnviarBytes(conn, bytesRespuesta)
+}
+
+func (ctrl *Controlador)EnviarBytes(conn net.Conn, datos []byte){
+	if !strings.HasSuffix(string(datos), "\n"){
+		datos = append(datos, '\n')
+	}
+	conn.Write(datos)
 }
