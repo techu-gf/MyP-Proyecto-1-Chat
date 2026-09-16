@@ -2,6 +2,11 @@ package mensaje
 
 import "strings"
 
+//Mensaje será el programa del lado del servidor que nos ayude a
+//manejar los mensajes. Guardará la información necesaria del
+//mensaje y nos permitirá acceder a esta
+
+//Mensaje con los campos posibles que puede tener el mensaje JSON.
 type Mensaje struct{
 	Tipo string `json:"type,omitempty"`
 	Username string `json:"username,omitempty"`
@@ -14,7 +19,58 @@ type Mensaje struct{
 	Roomname string `json:"roomname,omitempty"`
 }
 
-func esValido(msg *Mensaje) bool{
+func CrearMensajeIdentify(username string) *Mensaje{
+	return &Mensaje{
+		Tipo : "IDENTIFY",
+		Username : username,
+	}
+}
+
+func CrearMensajeResponse(operation, result, extra string) *Mensaje{
+	return &Mensaje{
+		Tipo : "RESPONSE",
+		Result : result,
+		Extra : extra,
+		
+	}
+}
+
+func CrearMensajeNewUser(username string) *Mensaje{
+	return &Mensaje{
+		Tipo : "NEW_USER",
+		Username : username,
+	}
+}
+
+func CrearMensajeStatus(status string) *Mensaje{
+	return &Mensaje{
+		Tipo : "STATUS",
+		Status : status,
+	}
+}
+
+func CrearMensajeNewStatus(status, username string) *Mensaje{
+	return &Mensaje{
+		Tipo : "NEW_STATUS",
+		Username : username,
+		Status : status,
+	}
+}
+
+func CrearMensajeUsers() *Mensaje{
+	return &Mensaje{
+		Tipo : "USERS",
+	}
+}
+
+func CrearMensajeUSER_LIST(username string) *Mensaje{
+	return &Mensaje{
+		Tipo : "IDENTIFY",
+		Username : username,
+	}
+}
+
+func (msg *Mensaje) EsValido() bool{
 	return strings.TrimSpace(msg.Tipo) != ""
 }
 
