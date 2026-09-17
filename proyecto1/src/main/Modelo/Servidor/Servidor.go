@@ -16,17 +16,94 @@ import(
 //de usuarios y el mapa de salas.
 type Servidor struct{
 	puerto int
-	usuarios map[int]net.Conn
+	usuarios map[string]net.Conn
+	status map[string]string
 	salas map[string][]string
+	acciones chan func() 
+	broadcast chan []byte
 }
 
 //La función LevantarServidor da por iniciado el Servidor y se define 
 //el puerto. Se crea el mapa vacío para usuarios y salas. 
-func LevantarServidor(puertoDado int) *Servidor{
+func CrearServidor(puertoDado int) *Servidor{
 	return &Servidor{
 		puerto : puertoDado,
-		usuarios : make(map[int]net.Conn),
+		usuarios : make(map[string]net.Conn),
+		status : make(map[string]string),
 		salas : make(map[string][]string),
+		acciones : make(chan func()),
+		broadcast : make(chan []byte),
+	}
+}
+
+//La función Iniciar empieza la escucha continua en el puerto dado en
+//busca de aceptar nuevos clientes a la vez que administra los procesos
+//de nuevos usuarios, desconectar usuarios y recibo y envío de datos
+func (serv *Servidor)Iniciar(){
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", puerto))
+	if err != nil {
+		fmt.Println("No se pudo inciar el servidor debido al error: ", err)
+		return
+	}
+	
+	defer ln.Close()
+
+	fmt.Printf("Servidor activo en el puerto %d.\n", puerto)
+	
+	go func() {
+		for {
+			conn, err := listener.Accept()
+
+			if err != nil {
+				return
+			}
+			
+			go serv.ProcesoCliente(conn)
+		}
+	}
+
+	for{
+		select{
+			case accion := <- serv.acciones:
+			accion()
+
+			case datos := <- serv.broadcast:
+			for _, conn := range serv.usuarios{
+				conn.Write(datos)
+			}
+		}
+	}
+}
+
+//La función NuevoUsuario asegurará que el username no está en uso y agregará
+//al usuario al servidor junto con su estado predeterminado (ACTIVE).
+func (serv *Servidor)NuevoUsuario(username string, conn net.Conn) error {
+	respuesta := make(chan error)
+
+	serv.acciones <- func(){
+		if _,existe := serv.usuarios[username] ; existe{
+			respuesta <- fmt.Errorf("El nombre %s ya está en uso.\n", username)
+			return
+		}
+
+		serv.usuarios[username] = conn
+		serv.estados[username] = "ACTIVE"
+		respuesta <- nil
+	}
+
+	return <- respuesta
+}
+
+//La función DesconectarUsuario buscará y eliminará del servidor al usuario
+//que lo solicite.
+func (serv *Servidor)DesconectarUsuario(username string){
+	serv.acciones <- func(){
+		if _,existe := serv.usuarios[username] ; existe{
+			delete(serv.usuarios, username)
+			delete(serv.status, username)
+
+			fmt.Printf("El usuario %s se ha desconectado.\n", username)
+		}
 	}
 }
 
@@ -34,30 +111,48 @@ func LevantarServidor(puertoDado int) *Servidor{
 //del cliente. Va a recibir un mensaje del controlador, el mensaje vendrá
 //por parte del cliente, procesará el mensaje dado y realizará la acción
 //solicitada.
-func (serv *Servidor)ProcesoCliente(conn net.Conn) {
+func (serv *Servidor)ProcesoCliente(conn net.Conn){
 	defer conn.Close()
 	
 	fmt.Printf("Se conectó alguien desde la dirección %s\n", conn.RemoteAddr())
 	
 	scanner := bufio.NewScanner(conn)
+	var usuario string
+	ctrl := controlador.CrearControlador(serv)
 	
 	for scanner.Scan(){
-		mensaje := scanner.Text()
+		mensaje := scanner.Bytes()
 
-		if(mensaje) == "/salir"{
-			fmt.Fprintln(conn, "Desconectando del servidor...")
-			break
+		msg, err := ctrl.MensajeSinJSON(mensaje)
+
+		if err != nil{
+			ctrl.OperacionInvalida(conn, "INVALID")
+			continue
 		}
 
-		fmt.Printf("[%s] : %s\n", conn.RemoteAddr(), mensaje)
+		nuevoUsuario, err := ctrl.ProcesaMensaje(msg, conn, usuario)
+
+		if err != nil{
+			continue
+		}
+
+		if usuario == "" && nuevoUsuario != "" {
+			usuario = nuevoUsuario
+			fmt.Printf("Socket %s registrado como '%s'\n", conn.RemoteAddr(), usuario)
+		}
 	}
 
-	
 	if err := scanner.Err(); err != nil {
 		fmt.Printf("Error leyendo de %s: %v\n", conn.RemoteAddr(), err)
 	}
+	
+	if usuario != "" {
+		serv.DesconectaUsuario(usuario)
+	}
+}
 
-	fmt.Printf("Cliente %s desconectado.\n", conn.RemoteAddr())
+func (serv *Servidor)Broadcast(conn net.Conn){
+	
 }
 
 //La función GetPuertos regresa el puerto del servidor de forma que no podrá
@@ -68,7 +163,7 @@ func (serv *Servidor) GetPuerto() int{
 
 //La función GetUsuarios regresa el mapa de usuarios del servidor de forma que
 //no podrá ser modificable.
-func (serv *Servidor) GetUsuarios() map[int]net.Conn{
+func (serv *Servidor) GetUsuarios() map[string]net.Conn{
 	return serv.usuarios
 }
 
@@ -88,12 +183,6 @@ func (serv *Servidor) enviaMensaje(){
 //servidor.
 func (serv *Servidor) NuevoUsuario(nombreUsuario string, conexion net.Conn){
 	
-}
-
-//La función identificaUsuario asegura que el nombre del usuario es válido
-//y que el usuario se podrá unir al servidor.
-func (serv *Servidor) IdentificaUsuario(nombre string){
-	fmt.Printf("Se quiso identificar como %s", nombre)
 }
 
 //La función cambiaStatus cambiará el status mostrado del usuario que lo

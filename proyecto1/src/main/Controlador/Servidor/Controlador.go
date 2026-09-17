@@ -69,7 +69,7 @@ func (ctrl *Controlador)ProcesaMensaje(msg *mensaje.Mensaje, conn net.Conn, usua
 			return "", fmt.Errorf("Usuario nulo.")
 		}
 		
-		err := ctrl.serv.IdentificaUsuario(username, conn)
+		err := ctrl.serv.NuevoUsuario(username, conn)
 
 		var respuesta *mensaje.Mensaje
 		

@@ -18,3 +18,14 @@ tasks:
     cmds:
       - go test ./src/main/Modelo/Mensaje/... -v
     silent: true 
+
+  clean:
+    desc: Elimina archivos de respaldo temporales de Emacs
+    cmds:
+      - find . -type f \( -name "*~" -o -name "#*#" \) -delete
+    silent: true
+
+  cliente:
+      desc: Ejecuta el cliente
+      cmds:
+        - dotnet run src/main/Modelo/Cliente/Cliente.cs

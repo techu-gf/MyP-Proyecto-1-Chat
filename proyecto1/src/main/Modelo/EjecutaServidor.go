@@ -14,25 +14,12 @@ func main() {
 
 	puerto := *lecturaBandera
 	
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", puerto))
-	if err != nil {
-		fmt.Println("No se activó la acción Listen debido al error:", err)
-		return
-	}
+	serv := servidor.CrearServidor(puerto)
 	
-	defer ln.Close()
-	
-	serv := servidor.LevantarServidor(puerto)
-	
-	fmt.Println("Se levantó el servidor en el puerto", serv.GetPuerto())
-	
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			fmt.Println("No se pudo aceptar la conexión debido al error:", err)
-			continue
-		}
+	err := serv.Iniciar()
 
-		go serv.ProcesoCliente(conn)
+	if err != nil{
+		fmt.Printf("Error al iniciar el servidor en el puerto %d", puerto)
+		return
 	}
 }
