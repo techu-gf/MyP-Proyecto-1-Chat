@@ -4,6 +4,8 @@ import(
 	"fmt"
 	"net"
 	"bufio"
+	controlador "chat/src/main/Controlador/Servidor"
+	"chat/src/main/Modelo/Mensaje"
 )
 
 //Programa donde tendremos la estructura servidor. Esta estructura
@@ -39,20 +41,19 @@ func CrearServidor(puertoDado int) *Servidor{
 //La función Iniciar empieza la escucha continua en el puerto dado en
 //busca de aceptar nuevos clientes a la vez que administra los procesos
 //de nuevos usuarios, desconectar usuarios y recibo y envío de datos
-func (serv *Servidor)Iniciar(){
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", puerto))
+func (serv *Servidor)Iniciar() error {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", serv.puerto))
 	if err != nil {
-		fmt.Println("No se pudo inciar el servidor debido al error: ", err)
-		return
+		return fmt.Errorf("No se pudo inciar el servidor debido al error: ", err)
 	}
 	
 	defer ln.Close()
 
-	fmt.Printf("Servidor activo en el puerto %d.\n", puerto)
+	fmt.Printf("Servidor activo en el puerto %d.\n", serv.puerto)
 	
 	go func() {
 		for {
-			conn, err := listener.Accept()
+			conn, err := ln.Accept()
 
 			if err != nil {
 				return
@@ -60,7 +61,7 @@ func (serv *Servidor)Iniciar(){
 			
 			go serv.ProcesoCliente(conn)
 		}
-	}
+	}()
 
 	for{
 		select{
@@ -87,7 +88,7 @@ func (serv *Servidor)NuevoUsuario(username string, conn net.Conn) error {
 		}
 
 		serv.usuarios[username] = conn
-		serv.estados[username] = "ACTIVE"
+		serv.status[username] = "ACTIVE"
 		respuesta <- nil
 	}
 
@@ -118,7 +119,7 @@ func (serv *Servidor)ProcesoCliente(conn net.Conn){
 	
 	scanner := bufio.NewScanner(conn)
 	var usuario string
-	ctrl := controlador.CrearControlador(serv)
+	ctrl := controlador.CrearControlador()
 	
 	for scanner.Scan(){
 		mensaje := scanner.Bytes()
@@ -130,15 +131,22 @@ func (serv *Servidor)ProcesoCliente(conn net.Conn){
 			continue
 		}
 
-		nuevoUsuario, err := ctrl.ProcesaMensaje(msg, conn, usuario)
+		operacion, err := ctrl.ProcesaMensaje(msg, conn, usuario)
 
 		if err != nil{
 			continue
 		}
 
-		if usuario == "" && nuevoUsuario != "" {
-			usuario = nuevoUsuario
-			fmt.Printf("Socket %s registrado como '%s'\n", conn.RemoteAddr(), usuario)
+		respuesta, nombreUsuario, _ := serv.realizaOperacion(operacion, msg, conn)
+
+		if usuario == "" && nombreUsuario != ""{
+			usuario = nombreUsuario
+			fmt.Printf("%s se ha conectado al servidor.\n", usuario)
+		}
+
+		if respuesta != nil{
+			bytesRespuesta, _ := ctrl.MensajeAJSON(respuesta)
+			ctrl.EnviarBytes(conn, bytesRespuesta)
 		}
 	}
 
@@ -147,7 +155,28 @@ func (serv *Servidor)ProcesoCliente(conn net.Conn){
 	}
 	
 	if usuario != "" {
-		serv.DesconectaUsuario(usuario)
+		serv.DesconectarUsuario(usuario)
+	}
+}
+
+func (serv *Servidor)realizaOperacion(operacion string, msg *mensaje.Mensaje, conn net.Conn)(*mensaje.Mensaje, string, error){
+	switch operacion{
+		case "IDENTIFY":
+		nombre := msg.GetUsername()
+
+		err := serv.NuevoUsuario(nombre, conn)
+
+		if err != nil{
+			respuesta := mensaje.CrearMensajeResponse("IDENTIFY", "USER_ALREADY_EXISTS", nombre)
+			return respuesta, "", err
+		}
+
+		respuesta := mensaje.CrearMensajeResponse("IDENTIFY", "SUCCESS", nombre)
+		return respuesta, nombre, nil
+
+		default:
+		respuesta := mensaje.CrearMensajeResponse("INVALID", "INVALID", "")
+		return respuesta, "", fmt.Errorf("Operación no válida.\n")
 	}
 }
 
@@ -179,20 +208,9 @@ func (serv *Servidor) enviaMensaje(){
 	
 }
 
-//La función NuevoUsuario recibe la solicitud de agregar un usuario al
-//servidor.
-func (serv *Servidor) NuevoUsuario(nombreUsuario string, conexion net.Conn){
-	
-}
-
 //La función cambiaStatus cambiará el status mostrado del usuario que lo
 //solicita.
 func (serv *Servidor) CambiaStatus(status string){
-	
-}
-
-//La función desconectaUsuario va a desconectar al usuario del servidor.
-func (serv *Servidor) DesconectaUsuario(nombre string){
 	
 }
 
