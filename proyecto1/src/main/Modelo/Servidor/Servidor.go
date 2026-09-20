@@ -147,7 +147,7 @@ func (serv *Servidor)realizaOperacion(operacion string, msg *mensaje.Mensaje, co
 			msgNuevoUsuario := mensaje.CrearMensajeNewUser(nombre)
 
 			serv.enviaMensaje(respuesta, conn)
-			serv.enviaMensaje(msgNuevoUsuario, conn)
+			serv.Broadcast(nombre, msgNuevoUsuario)
 
 			return nil
 		}
@@ -202,9 +202,19 @@ func (serv *Servidor)DesconectarUsuario(username string){
 			fmt.Printf("%s se ha desconectado.\n", username)
 		}
 	}
+
+	mensaje := mensaje.CrearMensajeDisconnected(username)
+	serv.Broadcast(username, mensaje)
 }
 
-func (serv *Servidor)Broadcast(conn net.Conn){
+//La función Broadcast enviará mensajes a todos los clientes del servidor. Esta
+//función se basa fuertemente en el proyecto https://github.com/Jayant-issar/go-tcp-chat.git
+func (serv *Servidor)Broadcast(usuario string, mensaje *mensaje.Mensaje){
+	serv.acciones <- func(){
+		for _ , conn := range serv.usuarios{
+			go serv.enviaMensaje(mensaje, conn)
+		}
+	}
 	
 }
 
@@ -228,12 +238,18 @@ func (serv *Servidor)GetSalas() map[string][]string{
 
 //La función enviaMensaje mandará un mensaje al cliente en caso de ser
 //necesario.
-func (serv *Servidor)enviaMensaje(mensaje *mensaje.Mensaje, conn net.Conn){
+func (serv *Servidor)enviaMensaje(mensaje *mensaje.Mensaje, conn net.Conn) error{
 	ctrl := controlador.CrearControlador()
 	
-	bytesMensaje, _ := ctrl.MensajeAJSON(mensaje)
+	bytesMensaje, err := ctrl.MensajeAJSON(mensaje)
+
+	if err != nil{
+		return fmt.Errorf("Error al transformar el mensaje a JSON.")
+	}
 
 	ctrl.EnviarBytes(conn, bytesMensaje)
+
+	return nil
 }
 
 //La función cambiaStatus cambiará el status mostrado del usuario que lo
