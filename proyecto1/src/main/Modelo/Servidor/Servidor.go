@@ -76,38 +76,6 @@ func (serv *Servidor)Iniciar() error {
 	}
 }
 
-//La función NuevoUsuario asegurará que el username no está en uso y agregará
-//al usuario al servidor junto con su estado predeterminado (ACTIVE).
-func (serv *Servidor)NuevoUsuario(username string, conn net.Conn) error {
-	respuesta := make(chan error)
-
-	serv.acciones <- func(){
-		if _,existe := serv.usuarios[username] ; existe{
-			respuesta <- fmt.Errorf("El nombre %s ya está en uso.\n", username)
-			return
-		}
-
-		serv.usuarios[username] = conn
-		serv.status[username] = "ACTIVE"
-		respuesta <- nil
-	}
-
-	return <- respuesta
-}
-
-//La función DesconectarUsuario buscará y eliminará del servidor al usuario
-//que lo solicite.
-func (serv *Servidor)DesconectarUsuario(username string){
-	serv.acciones <- func(){
-		if _,existe := serv.usuarios[username] ; existe{
-			delete(serv.usuarios, username)
-			delete(serv.status, username)
-
-			fmt.Printf("El usuario %s se ha desconectado.\n", username)
-		}
-	}
-}
-
 //La función ProcesoCliente se encargará de empezar el proceso personalizado
 //del cliente. Va a recibir un mensaje del controlador, el mensaje vendrá
 //por parte del cliente, procesará el mensaje dado y realizará la acción
@@ -137,16 +105,18 @@ func (serv *Servidor)ProcesoCliente(conn net.Conn){
 			continue
 		}
 
-		respuesta, nombreUsuario, _ := serv.realizaOperacion(operacion, msg, conn)
+		if operacion == "DISCONNECT"{
+			if usuario != "" {
+				serv.DesconectarUsuario(usuario)
+				usuario = ""
+			}
+			return
+		}else{
+			errOp := serv.realizaOperacion(operacion, msg, conn)
 
-		if usuario == "" && nombreUsuario != ""{
-			usuario = nombreUsuario
-			fmt.Printf("%s se ha conectado al servidor.\n", usuario)
-		}
-
-		if respuesta != nil{
-			bytesRespuesta, _ := ctrl.MensajeAJSON(respuesta)
-			ctrl.EnviarBytes(conn, bytesRespuesta)
+			if operacion == "IDENTIFY" && errOp == nil{
+				usuario = msg.GetUsername()
+			} 
 		}
 	}
 
@@ -159,7 +129,8 @@ func (serv *Servidor)ProcesoCliente(conn net.Conn){
 	}
 }
 
-func (serv *Servidor)realizaOperacion(operacion string, msg *mensaje.Mensaje, conn net.Conn)(*mensaje.Mensaje, string, error){
+func (serv *Servidor)realizaOperacion(operacion string, msg *mensaje.Mensaje, conn net.Conn) error{
+	var respuesta *mensaje.Mensaje
 	switch operacion{
 		case "IDENTIFY":
 		nombre := msg.GetUsername()
@@ -167,16 +138,69 @@ func (serv *Servidor)realizaOperacion(operacion string, msg *mensaje.Mensaje, co
 		err := serv.NuevoUsuario(nombre, conn)
 
 		if err != nil{
-			respuesta := mensaje.CrearMensajeResponse("IDENTIFY", "USER_ALREADY_EXISTS", nombre)
-			return respuesta, "", err
+			respuesta = mensaje.CrearMensajeResponse("IDENTIFY", "USER_ALREADY_EXISTS", nombre)
+			serv.enviaMensaje(respuesta, conn)
+
+			return err
+		}else{
+			respuesta = mensaje.CrearMensajeResponse("IDENTIFY", "SUCCESS", nombre)
+			msgNuevoUsuario := mensaje.CrearMensajeNewUser(nombre)
+
+			serv.enviaMensaje(respuesta, conn)
+			serv.enviaMensaje(msgNuevoUsuario, conn)
+
+			return nil
 		}
 
-		respuesta := mensaje.CrearMensajeResponse("IDENTIFY", "SUCCESS", nombre)
-		return respuesta, nombre, nil
+		case "USERS":
+		listaUsuario := serv.VerListaUsuarios()
+
+		msgUserList := mensaje.CrearMensajeUserList(listaUsuario)
+
+		serv.enviaMensaje(msgUserList, conn)
+		
+		return nil
 
 		default:
 		respuesta := mensaje.CrearMensajeResponse("INVALID", "INVALID", "")
-		return respuesta, "", fmt.Errorf("Operación no válida.\n")
+
+		serv.enviaMensaje(respuesta, conn)
+		
+		return nil
+	}
+}
+
+//La función NuevoUsuario asegurará que el username no está en uso y agregará
+//al usuario al servidor junto con su estado predeterminado (ACTIVE).
+func (serv *Servidor)NuevoUsuario(username string, conn net.Conn) error {
+	respuesta := make(chan error)
+
+	serv.acciones <- func(){
+		if _,existe := serv.usuarios[username] ; existe{
+			respuesta <- fmt.Errorf("El nombre %s ya está en uso.\n", username)
+			return
+		}
+
+		serv.usuarios[username] = conn
+		serv.status[username] = "ACTIVE"
+		respuesta <- nil
+
+		fmt.Printf("%s se ha conectado.\n", username)
+	}
+
+	return <- respuesta
+}
+
+//La función DesconectarUsuario buscará y eliminará del servidor al usuario
+//que lo solicite.
+func (serv *Servidor)DesconectarUsuario(username string){
+	serv.acciones <- func(){
+		if _,existe := serv.usuarios[username] ; existe{
+			delete(serv.usuarios, username)
+			delete(serv.status, username)
+
+			fmt.Printf("%s se ha desconectado.\n", username)
+		}
 	}
 }
 
@@ -186,47 +210,62 @@ func (serv *Servidor)Broadcast(conn net.Conn){
 
 //La función GetPuertos regresa el puerto del servidor de forma que no podrá
 //ser modificable.
-func (serv *Servidor) GetPuerto() int{
+func (serv *Servidor)GetPuerto() int{
 	return serv.puerto
 }
 
 //La función GetUsuarios regresa el mapa de usuarios del servidor de forma que
 //no podrá ser modificable.
-func (serv *Servidor) GetUsuarios() map[string]net.Conn{
+func (serv *Servidor)GetUsuarios() map[string]net.Conn{
 	return serv.usuarios
 }
 
 //La función GetSalas regresa el mapa de salas del servidor de forma que no
 //podrá ser modificable.
-func (serv *Servidor) GetSalas() map[string][]string{
+func (serv *Servidor)GetSalas() map[string][]string{
 	return serv.salas
 }
 
 //La función enviaMensaje mandará un mensaje al cliente en caso de ser
 //necesario.
-func (serv *Servidor) enviaMensaje(){
+func (serv *Servidor)enviaMensaje(mensaje *mensaje.Mensaje, conn net.Conn){
+	ctrl := controlador.CrearControlador()
 	
+	bytesMensaje, _ := ctrl.MensajeAJSON(mensaje)
+
+	ctrl.EnviarBytes(conn, bytesMensaje)
 }
 
 //La función cambiaStatus cambiará el status mostrado del usuario que lo
 //solicita.
-func (serv *Servidor) CambiaStatus(status string){
+func (serv *Servidor)CambiaStatus(status string){
 	
 }
 
 //La función crearSala creará el cuarto que se solicita. 
-func (serv *Servidor) CrearSala(nombreSala, nombreUsuario string){
+func (serv *Servidor)CrearSala(nombreSala, nombreUsuario string){
 	
 }
 
 //La función agregarUsuarioSala agregará al usuario solicitado a una sala
 //especificada. 
-func (serv *Servidor) AgregarUsuarioSala(nombreSala, nombreUsuario string){
+func (serv *Servidor)AgregarUsuarioSala(nombreSala, nombreUsuario string){
 	
 }
 
 //La función verListaUsuarios dará la lista de usuarios dentro de una sala.
-func (serv *Servidor) VerListaUsuarios(nombreSala string){
-	
+func (serv *Servidor)VerListaUsuarios() map[string]string{
+	respuesta := make(chan map[string]string)
+
+	serv.acciones <- func(){
+		lista := make(map[string]string)
+		for nombre := range serv.usuarios{
+			lista[nombre] = serv.status[nombre]
+		}
+		
+		respuesta <- lista
+	}
+
+	return <- respuesta
 }
 

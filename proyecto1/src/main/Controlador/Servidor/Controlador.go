@@ -65,7 +65,26 @@ func (ctrl *Controlador)ProcesaMensaje(msg *mensaje.Mensaje, conn net.Conn, usua
 		}
 
 		return "IDENTIFY", nil
+
+		case "USERS":
+		if usuario == ""{
+			ctrl.OperacionInvalida(conn, "INVALID")
+			return "", fmt.Errorf("Usuario nulo.")
+		}
+
+		return "USERS", nil
+
+		case "PUBLIC_TEXT":
+		if usuario == ""{
+			ctrl.OperacionInvalida(conn, "INVALID")
+			return "", fmt.Errorf("Usuario nulo.")
+		}
+
+		return "PUBLIC_TEXT", nil
 		
+
+		case "DISCONNECT":
+		return "DISCONNECT", nil
 		
 		default:
 		ctrl.OperacionInvalida(conn, "INVALID")
