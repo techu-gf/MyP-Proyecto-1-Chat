@@ -6,21 +6,16 @@ import (
 	"net"
 	"strings"
 	"chat/src/main/Modelo/Mensaje"
-	"chat/src/main/Modelo/Servidor"
 )
 
 //El control del lado del servidor nos ayudará a "interpretar" los
 //mensajes que llegan en JSON recibidos a través del socket. Para esto
 //se usará Mensaje.
 
-type Controlador struct{
-	serv *servidor.Servidor
-}
+type Controlador struct{}
 
-func CrearControlador(servDado *servidor.Servidor) *Controlador{
-	return &Controlador{
-		serv : servDado,
-	}
+func CrearControlador() *Controlador{
+	return &Controlador{}
 }
 
 //Crea un JSON con el mensaje dado
@@ -62,28 +57,14 @@ func (ctrl *Controlador)ProcesaMensaje(msg *mensaje.Mensaje, conn net.Conn, usua
 
 	switch tipo{
 		case "IDENTIFY":
-		username := msg.GetUsername()
-
-		if(strings.TrimSpace(username) == ""){
+		if strings.TrimSpace(msg.GetUsername()) == ""{
 			ctrl.OperacionInvalida(conn, "INVALID")
 			return "", fmt.Errorf("Usuario nulo.")
 		}
-		
-		err := ctrl.serv.NuevoUsuario(username, conn)
+		return "IDENTIFY", nil
 
-		var respuesta *mensaje.Mensaje
-		
-		if err != nil{
-			respuesta = mensaje.CrearMensajeResponse("IDENTIFY", "USER_ALREADY_EXISTS", username)
-			bytesRespuesta, _ := ctrl.MensajeAJSON(respuesta)
-			ctrl.EnviarBytes(conn, bytesRespuesta)
-			return "", err
-		}
-		
-		respuesta = mensaje.CrearMensajeResponse("IDENTIFY", "SUCCESS", username)
-		bytesRespuesta, _ := ctrl.MensajeAJSON(respuesta)
-		ctrl.EnviarBytes(conn, bytesRespuesta)
-		return username, err
+		case "USERS", "DISCONNECT", "PUBLIC_TEXT":
+		return tipo, nil
 		
 		default:
 		ctrl.OperacionInvalida(conn, "INVALID")
