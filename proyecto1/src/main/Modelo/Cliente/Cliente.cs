@@ -1,13 +1,3 @@
-using System;
-<<<<<<< Updated upstream
-
-namespace cliente{
-
-    class Cliente{
-
-	static void Main(string[] args){
-	    Console.WriteLine("Hello World!");
-=======
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
@@ -60,7 +50,6 @@ namespace cliente{
 	    reader?.Close();
 	    writer?.Close();
 	    socket?.Close();
->>>>>>> Stashed changes
 	}
     }
 }
