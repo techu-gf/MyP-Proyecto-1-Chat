@@ -57,34 +57,14 @@ func (ctrl *Controlador)ProcesaMensaje(msg *mensaje.Mensaje, conn net.Conn, usua
 
 	switch tipo{
 		case "IDENTIFY":
-		username := msg.GetUsername()
-
-		if strings.TrimSpace(username) == ""{
+		if strings.TrimSpace(msg.GetUsername()) == ""{
 			ctrl.OperacionInvalida(conn, "INVALID")
 			return "", fmt.Errorf("Usuario nulo.")
 		}
-
 		return "IDENTIFY", nil
 
-		case "USERS":
-		if usuario == ""{
-			ctrl.OperacionInvalida(conn, "INVALID")
-			return "", fmt.Errorf("Usuario nulo.")
-		}
-
-		return "USERS", nil
-
-		case "PUBLIC_TEXT":
-		if usuario == ""{
-			ctrl.OperacionInvalida(conn, "INVALID")
-			return "", fmt.Errorf("Usuario nulo.")
-		}
-
-		return "PUBLIC_TEXT", nil
-		
-
-		case "DISCONNECT":
-		return "DISCONNECT", nil
+		case "USERS", "DISCONNECT", "PUBLIC_TEXT":
+		return tipo, nil
 		
 		default:
 		ctrl.OperacionInvalida(conn, "INVALID")
