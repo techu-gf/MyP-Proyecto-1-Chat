@@ -28,4 +28,5 @@ tasks:
   cliente:
       desc: Ejecuta el cliente
       cmds:
-        - dotnet run src/main/Modelo/Cliente/Cliente.cs
+        - dotnet run --project src/main/Modelo/ -- {{.CLI_ARGS}}
+    
