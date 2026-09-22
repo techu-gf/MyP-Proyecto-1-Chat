@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
+using mensaje;
 
 namespace cliente{
 
@@ -34,12 +35,24 @@ namespace cliente{
 	    }
 	}
 
+	public string GetStatus(){
+	    return status;
+	}
+	
 	public bool Conectado(){
 	    return conectado;
 	}
 
-	public string GetStatus(){
-	    return status;
+	public string? Leer(){
+	    try{
+		return reader?.ReadLine();
+	    }catch{
+		return null;
+	    }
+	}
+
+	public void EnviarDatos(string json){
+		writer?.WriteLine(json);
 	}
 
 	public void Desconectar(){

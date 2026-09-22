@@ -1,29 +1,35 @@
 using cliente;
 using System;
+using vista;
+using controlador;
 
 class EjecutaCliente{
 
     static async Task Main(string[] args){
-	Bandera banderas = new Bandera(args);
+	Lector banderas = new Lector();
+	banderas.ProcesaArgs(args);
 
-	Console.WriteLine($"Conectando A {banderas.GetHost()}:{banderas.GetPuerto()}");
+	Console.WriteLine($"Conectando a {banderas.GetHost()}:{banderas.GetPuerto()}.\n");
 
 	try{
 	    Cliente cliente = new Cliente(banderas.GetPuerto(), banderas.GetHost(), banderas.GetUsername());
+	    VistaCliente vista = new VistaCliente();
+	    Controlador ctrl = new Controlador(cliente, vista);
 
 	    if(cliente.Conectado()){
-		Console.WriteLine("Conexión exitosa con el servidor.");
+		Console.WriteLine("Usuario conectado, seguimos con la revisión del username.\n");
 
-		string? respuesta = Console.ReadLine();
+		bool identificado = ctrl.IdentificarCliente(banderas.GetUsername());
 
-		if(respuesta == "SALIR")
+		if(!identificado){
 		    cliente.Desconectar();
+		    return;
+		}
 	    }
 	}catch (System.Net.Sockets.SocketException e){
-            Console.WriteLine($"Error al conectar con el servidor: {e.Message}");
-            Console.WriteLine("Asegúrate de que el servidor Go esté ejecutándose y el puerto sea correcto.");
+	    Console.WriteLine($"Error al conectar con el servidor: {e.Message}");
 	}catch (Exception e){
-            Console.WriteLine($"Ocurrió un error inesperado: {e.Message}");
+	    Console.WriteLine($"Ocurrió un error inesperado: {e.Message}");
 	}
     }
 }
