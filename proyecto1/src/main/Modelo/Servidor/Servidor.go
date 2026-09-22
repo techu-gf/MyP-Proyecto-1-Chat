@@ -4,7 +4,8 @@ import(
 	"fmt"
 	"net"
 	"bufio"
-	controlador "chat/src/main/Controlador/Servidor"
+	"strings"
+	"encoding/json"
 	"chat/src/main/Modelo/Mensaje"
 )
 
@@ -41,10 +42,10 @@ func CrearServidor(puertoDado int) *Servidor{
 //La función Iniciar empieza la escucha continua en el puerto dado en
 //busca de aceptar nuevos clientes a la vez que administra los procesos
 //de nuevos usuarios, desconectar usuarios y recibo y envío de datos
-func (serv *Servidor)Iniciar() error {
+func (serv *Servidor)Iniciar(procesarMensajeFunc func(msg []byte, conn net.Conn, usuario *string) bool) error {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", serv.puerto))
 	if err != nil {
-		return fmt.Errorf("No se pudo inciar el servidor debido al error: ", err)
+		return fmt.Errorf("No se pudo inciar el servidor debido al error: %v", err)
 	}
 	
 	defer ln.Close()
@@ -59,7 +60,7 @@ func (serv *Servidor)Iniciar() error {
 				return
 			}
 			
-			go serv.ProcesoCliente(conn)
+			go serv.ProcesoCliente(conn, procesarMensajeFunc)
 		}
 	}()
 
@@ -80,93 +81,30 @@ func (serv *Servidor)Iniciar() error {
 //del cliente. Va a recibir un mensaje del controlador, el mensaje vendrá
 //por parte del cliente, procesará el mensaje dado y realizará la acción
 //solicitada.
-func (serv *Servidor)ProcesoCliente(conn net.Conn){
+func (serv *Servidor)ProcesoCliente(conn net.Conn, procesarMensajeFunc func(msg []byte, conn net.Conn, usuario *string) bool){
 	defer conn.Close()
 	
 	fmt.Printf("Se conectó alguien desde la dirección %s\n", conn.RemoteAddr())
 	
 	scanner := bufio.NewScanner(conn)
 	var usuario string
-	ctrl := controlador.CrearControlador()
 	
 	for scanner.Scan(){
 		mensaje := scanner.Bytes()
 
-		msg, err := ctrl.MensajeSinJSON(mensaje)
+		procesamientoMensaje := procesarMensajeFunc(mensaje, conn, &usuario)
 
-		if err != nil{
-			ctrl.OperacionInvalida(conn, "INVALID")
-			continue
-		}
-
-		operacion, err := ctrl.ProcesaMensaje(msg, conn, usuario)
-
-		if err != nil{
-			continue
-		}
-
-		if operacion == "DISCONNECT"{
-			if usuario != "" {
-				serv.DesconectarUsuario(usuario)
-				usuario = ""
-			}
+		if !procesamientoMensaje{
 			return
-		}else{
-			errOp := serv.realizaOperacion(operacion, msg, conn)
-
-			if operacion == "IDENTIFY" && errOp == nil{
-				usuario = msg.GetUsername()
-			} 
 		}
 	}
-
+	
 	if err := scanner.Err(); err != nil {
 		fmt.Printf("Error leyendo de %s: %v\n", conn.RemoteAddr(), err)
 	}
 	
 	if usuario != "" {
 		serv.DesconectarUsuario(usuario)
-	}
-}
-
-func (serv *Servidor)realizaOperacion(operacion string, msg *mensaje.Mensaje, conn net.Conn) error{
-	var respuesta *mensaje.Mensaje
-	switch operacion{
-		case "IDENTIFY":
-		nombre := msg.GetUsername()
-
-		err := serv.NuevoUsuario(nombre, conn)
-
-		if err != nil{
-			respuesta = mensaje.CrearMensajeResponse("IDENTIFY", "USER_ALREADY_EXISTS", nombre)
-			serv.enviaMensaje(respuesta, conn)
-
-			return err
-		}else{
-			respuesta = mensaje.CrearMensajeResponse("IDENTIFY", "SUCCESS", nombre)
-			msgNuevoUsuario := mensaje.CrearMensajeNewUser(nombre)
-
-			serv.enviaMensaje(respuesta, conn)
-			serv.Broadcast(nombre, msgNuevoUsuario)
-
-			return nil
-		}
-
-		case "USERS":
-		listaUsuario := serv.VerListaUsuarios()
-
-		msgUserList := mensaje.CrearMensajeUserList(listaUsuario)
-
-		serv.enviaMensaje(msgUserList, conn)
-		
-		return nil
-
-		default:
-		respuesta := mensaje.CrearMensajeResponse("INVALID", "INVALID", "")
-
-		serv.enviaMensaje(respuesta, conn)
-		
-		return nil
 	}
 }
 
@@ -209,13 +147,43 @@ func (serv *Servidor)DesconectarUsuario(username string){
 
 //La función Broadcast enviará mensajes a todos los clientes del servidor. Esta
 //función se basa fuertemente en el proyecto https://github.com/Jayant-issar/go-tcp-chat.git
-func (serv *Servidor)Broadcast(usuario string, mensaje *mensaje.Mensaje){
+func (serv *Servidor)Broadcast(usuario string, msg *mensaje.Mensaje){
 	serv.acciones <- func(){
 		for _ , conn := range serv.usuarios{
-			go serv.enviaMensaje(mensaje, conn)
+			usuarioDestino := conn
+			go func(c net.Conn){
+				err := serv.enviaMensaje(msg, c)
+				if err != nil{
+					fmt.Printf("Error mandando mensaje al cliente: %v.\n", err)
+				}
+			}(usuarioDestino)
 		}
 	}
 	
+}
+
+func (serv *Servidor)enviaMensaje(msg *mensaje.Mensaje, conn net.Conn) error{
+	if msg == nil{
+		return fmt.Errorf("No se puede mandar un mensaje nulo.\n")
+	}
+
+	bytesMensaje, err := json.Marshal(msg)
+
+	if err != nil{
+		return fmt.Errorf("Error al transformar el mensaje a JSON.\n")
+	}
+
+	if !strings.HasSuffix(string(bytesMensaje), "\n"){
+		bytesMensaje = append(bytesMensaje, '\n')
+	}
+
+	_, err = conn.Write(bytesMensaje)
+
+	if err != nil{
+		return fmt.Errorf("Error al mandar mensaje por el socket.\n")
+	}
+
+	return nil
 }
 
 //La función GetPuertos regresa el puerto del servidor de forma que no podrá
@@ -234,22 +202,6 @@ func (serv *Servidor)GetUsuarios() map[string]net.Conn{
 //podrá ser modificable.
 func (serv *Servidor)GetSalas() map[string][]string{
 	return serv.salas
-}
-
-//La función enviaMensaje mandará un mensaje al cliente en caso de ser
-//necesario.
-func (serv *Servidor)enviaMensaje(mensaje *mensaje.Mensaje, conn net.Conn) error{
-	ctrl := controlador.CrearControlador()
-	
-	bytesMensaje, err := ctrl.MensajeAJSON(mensaje)
-
-	if err != nil{
-		return fmt.Errorf("Error al transformar el mensaje a JSON.")
-	}
-
-	ctrl.EnviarBytes(conn, bytesMensaje)
-
-	return nil
 }
 
 //La función cambiaStatus cambiará el status mostrado del usuario que lo
