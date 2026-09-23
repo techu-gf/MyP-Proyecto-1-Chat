@@ -2,6 +2,7 @@ using cliente;
 using System;
 using vista;
 using controlador;
+using System.Threading;
 
 class EjecutaCliente{
 
@@ -25,6 +26,12 @@ class EjecutaCliente{
 		    cliente.Desconectar();
 		    return;
 		}
+
+		Thread hiloServidor = new Thread(ctrl.EscucharServidor);
+		hiloServidor.IsBackground = true;
+		hiloServidor.Start();
+
+		ctrl.LeerUsuario();
 	    }
 	}catch (System.Net.Sockets.SocketException e){
 	    Console.WriteLine($"Error al conectar con el servidor: {e.Message}");

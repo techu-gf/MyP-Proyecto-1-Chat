@@ -105,23 +105,25 @@ namespace cliente{
 	}
 
 	public bool ProcesaComando(string[] comando){
-	    bool comandoValido = false;
+	    if(comando == null || comando.Length == 0){
+		return false;
+	    }
 	    
 	    switch(comando[0]){
+		case "/list":
+		case "/quit":
+		    return true;
+		    
 		case "/say ":
 		    if(1 > comando.Length){
 			Console.WriteLine("Debe proporcionar el mensaje.");
-			break;
+			return false;
 		    }
-		    comandoValido = true;
-		    break;
+		    return true;
 		    
 		default:
-		    comandoValido = false;
-		    break;
+		    return false;
 	    }
-
-	    return comandoValido;
 	}
     }
 }

@@ -9,5 +9,9 @@ namespace vista{
 	public void EscribirMensaje(string sender, string msg){
 	    Console.WriteLine($"<{sender}> : {msg}\n");
 	}
+
+	public string? LeerMensaje(){
+	    return Console.ReadLine();
+	}
     }
 }

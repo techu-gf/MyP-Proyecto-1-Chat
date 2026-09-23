@@ -52,13 +52,22 @@ namespace cliente{
 	}
 
 	public void EnviarDatos(string json){
+	    if(string.IsNullOrEmpty(json)){
+		Console.WriteLine("No se pueden mandar datos vacíos.\n");
+	    }
+
+	    if(!conectado){
+		Console.WriteLine("No está identificado con el servidor.\n");
+		Environment.Exit(1);
+		
+	    }
 		writer?.WriteLine(json);
 	}
 
 	public void Desconectar(){
 	    if(!conectado)
 		return;
-
+	    
 	    conectado = false;
 	    reader?.Close();
 	    writer?.Close();
