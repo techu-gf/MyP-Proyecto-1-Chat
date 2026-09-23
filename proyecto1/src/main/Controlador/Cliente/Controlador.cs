@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text;
 using cliente;
 using mensaje;
 using vista;
@@ -97,6 +98,28 @@ namespace controlador{
 		case "RESPONSE":
 		    ProcesaResponse(msg);
 		    break;
+
+		case "NEW_USER":
+		    vista.EscribirMensaje("SISTEMA", msg.username + " se ha conectado.");
+		    break;
+
+		case "USER_LIST":
+		    if(msg.users != null){
+			StringBuilder respuesta = new StringBuilder("Lista de usuarios: ");
+
+			foreach (KeyValuePair<string, string> usuario in msg.users){
+			    respuesta.Append($"\n\t{usuario.Key} - {usuario.Value}");
+			}
+		    
+			vista.EscribirMensaje("SISTEMA", respuesta.ToString());
+		    }else{
+			vista.EscribirMensaje("SISTEMA", "No hay usuarios.");
+		    }
+		    break;
+
+		case "DISCONNECTED":
+		    vista.EscribirMensaje("SISTEMA", msg.username + " se ha desconectado.");
+		    break;
 		    
 		default:
 		    Console.WriteLine($"se recibió un tipo distinto a response: {msg.tipo}.");
@@ -111,7 +134,7 @@ namespace controlador{
 			identificado = true;
 			vista.EscribirMensaje("SISTEMA", "Identificación exitosa. ¡Bienvenido!");
 		    }else{
-			vista.EscribirMensaje($"SISTEMA", "Error de identificación ({msg.result}).");
+			vista.EscribirMensaje("SISTEMA", "Error de identificación ({msg.result}).");
 		    }
 		    break;
 

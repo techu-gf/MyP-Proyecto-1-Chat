@@ -18,18 +18,18 @@ class EjecutaCliente{
 	    Controlador ctrl = new Controlador(cliente, vista);
 
 	    if(cliente.Conectado()){
-		Console.WriteLine("Usuario conectado, seguimos con la revisión del username.\n");
-
 		bool identificado = ctrl.IdentificarCliente(banderas.GetUsername());
 
 		if(!identificado){
 		    cliente.Desconectar();
 		    return;
 		}
-
+		
 		Thread hiloServidor = new Thread(ctrl.EscucharServidor);
 		hiloServidor.IsBackground = true;
 		hiloServidor.Start();
+
+		Thread.Sleep(100);
 
 		ctrl.LeerUsuario();
 	    }
