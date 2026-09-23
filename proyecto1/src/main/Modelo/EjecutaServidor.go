@@ -4,6 +4,7 @@ import(
 	"fmt"
 	"flag"
 	"chat/src/main/Modelo/Servidor"
+	controlador "chat/src/main/Controlador/Servidor"
 )
 
 func main() {
@@ -15,7 +16,9 @@ func main() {
 	
 	serv := servidor.CrearServidor(puerto)
 	
-	err := serv.Iniciar()
+	ctrl := controlador.CrearControlador(serv)
+
+	err := serv.Iniciar(ctrl.ProcesaMensaje)
 
 	if err != nil{
 		fmt.Printf("Error al iniciar el servidor en el puerto %d", puerto)
