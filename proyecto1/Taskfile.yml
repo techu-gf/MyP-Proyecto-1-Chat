@@ -1,0 +1,32 @@
+version: '3'
+
+tasks:
+  test_servidor:
+    desc: Ejecuta los test para Servidor
+    cmds:
+      - go test ./src/main/Modelo/Servidor/... -v
+    silent: true
+    
+  servidor:
+    desc: Ejecuta el servidor
+    cmds:
+      - go run src/main/Modelo/EjecutaServidor.go {{.CLI_ARGS}}
+    silent: true
+
+  test_mensaje:
+    desc: Ejecuta los test para Mensaje
+    cmds:
+      - go test ./src/main/Modelo/Mensaje/... -v
+    silent: true 
+
+  clean:
+    desc: Elimina archivos de respaldo temporales de Emacs
+    cmds:
+      - find . -type f \( -name "*~" -o -name "#*#" \) -delete
+    silent: true
+
+  cliente:
+      desc: Ejecuta el cliente
+      cmds:
+        - dotnet run --project src/main/ -- {{.CLI_ARGS}}
+    
