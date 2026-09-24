@@ -5,12 +5,10 @@ using controlador;
 using System.Threading;
 
 class EjecutaCliente{
-
-    static async Task Main(string[] args){
+     
+    static void Main(string[] args){
 	Lector banderas = new Lector();
 	banderas.ProcesaArgs(args);
-
-	Console.WriteLine($"Conectando a {banderas.GetHost()}:{banderas.GetPuerto()}.\n");
 
 	try{
 	    Cliente cliente = new Cliente(banderas.GetPuerto(), banderas.GetHost(), banderas.GetUsername());

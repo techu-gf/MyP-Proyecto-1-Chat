@@ -6,31 +6,58 @@ using vista;
 
 namespace controlador{
 
+    ///<summary>
+    ///Controlador del Cliente el cual se encargará de coordinar las
+    ///acciones entre el Cliente (Modelo) y la vista en terminal (Vista).
+    ///</summary>
     public class Controlador{
 	private bool identificado;
 	private Cliente cliente;
 	private VistaCliente vista;
-	
+
+	///<summary>
+	///Constructor del Controlador.
+	///</summary>
+	///<param name="cliente">Cliente que manejará.
+	///<param name="vista">Vista que manejará.
 	public Controlador(Cliente cliente, VistaCliente vista){
 	    identificado = false;
 	    this.cliente = cliente;
 	    this.vista = vista;
 	}
 
+	///<summary>
+	///Transforma un Mensaje a un JSON.
+	///</summary>
+	///<param name="msg">Mensaje a transformar.
+	///<returns>Cadena con el JSON.
 	public string MensajeAJSON(Mensaje msg){
 	    if(msg == null) throw new ArgumentNullException(nameof(msg));
 
 	    return JsonSerializer.Serialize(msg);
 	}
 
+	///<summary>
+	///Transforma un JSON un Mensaje.
+	///</summary>
+	///<param name="datosJson">Cadena con el JSON.
+	///<returns>Mensaje obtenido del JSON.
 	public Mensaje? MensajeSinJSON(string datosJson){
 	    return JsonSerializer.Deserialize<Mensaje>(datosJson);
 	}
 
+	///<summary>
+	///Lee lo que escriba el usuario en la vista (terminal).
+	///</summary>
+	///<returns>Cadena de texto con lo que escribió el usuario.
 	public string? LeerEntradaUsuario(){
 	    return vista.LeerMensaje();
 	}
 
+	///<summary>
+	///Ciclo en el que se escuchará continuamente al servidor para
+	///recibir los mensajes que mande.
+	///</summary>
 	public void EscucharServidor(){
 	    if(!cliente.Conectado())
 		return;
@@ -48,6 +75,10 @@ namespace controlador{
 	    }
 	}
 
+	///<summary>
+	///Ciclo en el que se estará leyendo de forma continua lo que
+	///escriba el usuario. 
+	///</summary>
 	public void LeerUsuario(){
 	    if(!cliente.Conectado())
 		return;
@@ -64,9 +95,18 @@ namespace controlador{
 		LeerUsuario();
 	}
 
+	///<summary>
+	///Maneja el mensaje que mandó el usuario y realiza las operaciones
+	///necesarias de acuerdo a lo que solicita. 
+	///</summary>
+	///<param name="msg">Cadena de texto con el texto enviado por el usuario.
 	public void ProcesaMensajeVista(string msg){
+	    if(string.IsNullOrWhiteSpace(msg))
+		return;
+	    
 	    Lector comando = new Lector();
-	    string[] msgSeparado = msg.Split(' ');
+	    msg = msg.Trim();
+	    string[] msgSeparado = msg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 	    bool valido = comando.ProcesaComando(msgSeparado);
 
 	    if(!valido){
@@ -75,6 +115,17 @@ namespace controlador{
 	    }
 
 	    switch(msgSeparado[0]){
+		case "/status":
+		    string nuevoStatus = msgSeparado[1].Trim();
+		    Mensaje cambiarStatus = Mensaje.CrearMensajeStatus(nuevoStatus);
+		    string cambiarStatusJSON = MensajeAJSON(cambiarStatus);
+
+		    cliente.EnviarDatos(cambiarStatusJSON);
+
+		    vista.AgregaInicio();
+
+		    break;
+		    
 		case "/list":
 		    Mensaje listarUsuarios = Mensaje.CrearMensajeUsers();
 		    string listarUsuariosJSON = MensajeAJSON(listarUsuarios);
@@ -83,12 +134,29 @@ namespace controlador{
 
 		    break;
 
+		case "/say":
+		    string mensaje = msg.Substring(4);
+		    Mensaje publicText = Mensaje.CrearMensajePublicText(mensaje);
+		    string publicTextJSON = MensajeAJSON(publicText);
+
+		    cliente.EnviarDatos(publicTextJSON);
+
+		    vista.AgregaInicio();
+
+		    break;
+		    
+
 		case "/quit":
 		    DesconectarCliente();
 		    break;
 	    }
 	}
 
+	///<summary>
+	///Maneja el mensaje recibido por parte del servidor para transmitirlo 
+	///al usuario.
+	///</summary>
+	///<param name="msg">Mensaje enviado por el servidor.
 	public void ProcesaMensajeServidor(Mensaje msg){
 	    if(msg == null || !msg.esValido()){
 		return;
@@ -101,6 +169,10 @@ namespace controlador{
 
 		case "NEW_USER":
 		    vista.EscribirMensaje("SISTEMA", msg.username + " se ha conectado.");
+		    break;
+
+		case "NEW_STATUS":
+		    vista.EscribirMensaje("SISTEMA", msg.username + " cambió su status a " + msg.status);
 		    break;
 
 		case "USER_LIST":
@@ -117,6 +189,10 @@ namespace controlador{
 		    }
 		    break;
 
+		case "PUBLIC_TEXT_FROM":
+		    vista.EscribirMensaje(msg?.username, msg?.text);
+		    break;
+
 		case "DISCONNECTED":
 		    vista.EscribirMensaje("SISTEMA", msg.username + " se ha desconectado.");
 		    break;
@@ -127,6 +203,11 @@ namespace controlador{
 	    }
 	}
 
+	///<summary>
+	///Método privado que ayuda a manejar los distintos casos de los
+	///Response enviados por el servidor.
+	///</summary>
+	///<param name="msg">Mensaje enviado por el servidor.
 	private void ProcesaResponse(Mensaje msg){
 	    switch(msg.operation){
 		case "IDENTIFY":
@@ -141,10 +222,26 @@ namespace controlador{
 		case "USER_LIST":
 		    vista.EscribirMensaje("SISTEMA", "Se proporciona la lista de usuarios.");
 		    break;
-		    
+
+		case "INVALID":
+		    if(msg.result == "NOT_IDENTIFIED"){
+			vista.EscribirMensaje("SISTEMA", "Debe identificarse primero. Se le va a desconectar del sistema.");
+
+			DesconectarCliente();
+		    }
+
+		    vista.EscribirMensaje("SISTEMA", "El mensaje está incompleto, con valores innesperados o no se puede reconocer.");
+		    break;
 	    }
 	}
 
+	///<summary>
+	///Identifica al usuario con el servidor.
+	///</summary>
+	///<param name="username">Nombre de usuario con el que se quiere
+	///identificar el usuario
+	///<returns>True si el usuario se identificó exitosamente. False
+	///si no se pudo identificar.
 	public bool IdentificarCliente(string username){
 	    Mensaje msgIdentify = Mensaje.CrearMensajeIdentify(username);
 	    string identifyJSON = MensajeAJSON(msgIdentify);
@@ -154,7 +251,7 @@ namespace controlador{
 	    string? respuestaJSON = cliente.Leer();
 
 	    if(respuestaJSON == null){
-		vista.EscribirMensaje("SERVIDOR", "Sin respuesta.\n");
+		vista.EscribirMensaje("SERVIDOR", "Sin respuesta.");
 		return false;
 	    }
 
@@ -167,18 +264,15 @@ namespace controlador{
 	    return identificado;
 	}
 
+	///<summary>
+	///Desconecta al usuario del servidor.
+	///</summary>
 	public void DesconectarCliente(){
 	    Mensaje msg = Mensaje.CrearMensajeDisconnect();
 	    string msgJSON = MensajeAJSON(msg);
 
 	    cliente.EnviarDatos(msgJSON);
 	    cliente.Desconectar();
-
-	    vista.EscribirMensaje("SISTEMA", "Desconexión exitosa.");
-	}
-
-	public void OperacionInvalida(){
-	    
 	}
     }
 }

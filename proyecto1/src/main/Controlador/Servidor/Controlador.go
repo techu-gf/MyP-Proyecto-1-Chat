@@ -17,13 +17,14 @@ type Controlador struct{
 	serv *servidor.Servidor
 }
 
+//CrearControlador será nuestro "constructor" del Controlador.
 func CrearControlador(serv *servidor.Servidor) *Controlador{
 	return &Controlador{
 		serv: serv,
 	}
 }
 
-//Crea un JSON con el mensaje dado
+//Crea un JSON con el mensaje dado.
 func (ctrl *Controlador)MensajeAJSON(msg *mensaje.Mensaje)([]byte, error){
 	if msg == nil{
 		return nil, fmt.Errorf("No se aceptan mensajes nulos")
@@ -32,7 +33,7 @@ func (ctrl *Controlador)MensajeAJSON(msg *mensaje.Mensaje)([]byte, error){
 	return json.Marshal(msg)
 }
 
-//Interpreta el mensaje del JSON dado
+//Interpreta el mensaje del JSON dado.
 func (ctrl *Controlador)MensajeSinJSON(datosJson []byte)(*mensaje.Mensaje, error){
 	var msg mensaje.Mensaje
 
@@ -90,12 +91,34 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 
 		return true
 
+		case "STATUS":
+		nuevoStatus := msgSinJSON.GetStatus()
+
+		if nuevoStatus == "ACTIVE" || nuevoStatus == "AWAY" || nuevoStatus == "BUSY"{
+			ctrl.serv.CambiaStatus(*usuario, nuevoStatus)
+
+			msgNewStatus := mensaje.CrearMensajeNewStatus(*usuario, nuevoStatus)
+			ctrl.serv.Broadcast(*usuario, msgNewStatus)
+
+			return true
+		}
+
+		ctrl.OperacionInvalida(conn, "INVALID")
+
+		return true
+
 		case "USERS":
 		listaUsuarios := ctrl.serv.VerListaUsuarios()
 		msgUserList := mensaje.CrearMensajeUserList(listaUsuarios)
 		ctrl.EnviarMensaje(msgUserList, conn)
 
 		return true
+
+		case "PUBLIC_TEXT":
+		msgPublicText := mensaje.CrearMensajePublicTextFrom(*usuario, msgSinJSON.GetText())
+		ctrl.serv.Broadcast(*usuario, msgPublicText)
+
+		return true;
 
 		case "DISCONNECT":
 		if *usuario != ""{
@@ -111,12 +134,16 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 	}
 }
 
+//OperacionInvalida crea un mensaje del tipo Invalido, busca ahorrar el repetir
+//este bloque de código en distintas operaciones.
 func (ctrl *Controlador)OperacionInvalida(conn net.Conn, resultado string){
 	respuesta := mensaje.CrearMensajeResponse("INVALID", resultado, "")
 	bytesRespuesta,_ := ctrl.MensajeAJSON(respuesta)
 	ctrl.enviarBytes(conn, bytesRespuesta)
 }
 
+//EnviarMensaje se encarga de transformar el mensaje dado a JSON y de mandar
+//los bytes a la conexión dada. Busca evitar repetir el mismo bloque de código.
 func (ctrl *Controlador)EnviarMensaje(msg *mensaje.Mensaje, conn net.Conn) error{
 	bytesMensaje, err := ctrl.MensajeAJSON(msg)
 	if err != nil{
@@ -127,6 +154,7 @@ func (ctrl *Controlador)EnviarMensaje(msg *mensaje.Mensaje, conn net.Conn) error
 	return nil
 }
 
+//enviarBytes es un método privado que se encarga de únicamente mandar los JSON.
 func (ctrl *Controlador)enviarBytes(conn net.Conn, datos []byte){
 	if !strings.HasSuffix(string(datos), "\n"){
 		datos = append(datos, '\n')

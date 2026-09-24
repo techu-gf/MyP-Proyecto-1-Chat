@@ -14,13 +14,17 @@ import(
 //que se conecten al servidor y las salas que posee. Se necargará
 //de manejar los procesos de cada cliente a través de gorutines. 
 
+//Estructura Cliente con la conexión y el estatus del cliente.
+type Cliente struct{
+	conn net.Conn
+	status string
+}
 
 //Estructura Servidor con el puerto donde se encuentra, el mapa
 //de usuarios y el mapa de salas.
 type Servidor struct{
 	puerto int
-	usuarios map[string]net.Conn
-	status map[string]string
+	usuarios map[string]Cliente
 	salas map[string][]string
 	acciones chan func() 
 	broadcast chan []byte
@@ -31,8 +35,7 @@ type Servidor struct{
 func CrearServidor(puertoDado int) *Servidor{
 	return &Servidor{
 		puerto : puertoDado,
-		usuarios : make(map[string]net.Conn),
-		status : make(map[string]string),
+		usuarios : make(map[string]Cliente),
 		salas : make(map[string][]string),
 		acciones : make(chan func()),
 		broadcast : make(chan []byte),
@@ -70,8 +73,8 @@ func (serv *Servidor)Iniciar(procesarMensajeFunc func(msg []byte, conn net.Conn,
 			accion()
 
 			case datos := <- serv.broadcast:
-			for _, conn := range serv.usuarios{
-				conn.Write(datos)
+			for _, cliente := range serv.usuarios{
+				cliente.conn.Write(datos)
 			}
 		}
 	}
@@ -119,8 +122,10 @@ func (serv *Servidor)NuevoUsuario(username string, conn net.Conn) error {
 			return
 		}
 
-		serv.usuarios[username] = conn
-		serv.status[username] = "ACTIVE"
+		serv.usuarios[username] = Cliente{
+			conn: conn,
+			status: "ACTIVE",
+		}
 		respuesta <- nil
 
 		fmt.Printf("%s se ha conectado.\n", username)
@@ -135,7 +140,6 @@ func (serv *Servidor)DesconectarUsuario(username string){
 	serv.acciones <- func(){
 		if _,existe := serv.usuarios[username] ; existe{
 			delete(serv.usuarios, username)
-			delete(serv.status, username)
 
 			fmt.Printf("%s se ha desconectado.\n", username)
 		}
@@ -147,19 +151,15 @@ func (serv *Servidor)DesconectarUsuario(username string){
 
 //La función Broadcast enviará mensajes a todos los clientes del servidor. Esta
 //función se basa fuertemente en el proyecto https://github.com/Jayant-issar/go-tcp-chat.git
-func (serv *Servidor)Broadcast(usuario string, msg *mensaje.Mensaje){
-	serv.acciones <- func(){
-		for _ , conn := range serv.usuarios{
-			usuarioDestino := conn
-			go func(c net.Conn){
-				err := serv.enviaMensaje(msg, c)
-				if err != nil{
-					fmt.Printf("Error mandando mensaje al cliente: %v.\n", err)
-				}
-			}(usuarioDestino)
+func (serv *Servidor)Broadcast(usuario string, mensaje *mensaje.Mensaje){
+	serv.acciones <- func() {
+		for usuarioDestino, cliente := range serv.usuarios {
+			if usuarioDestino != usuario {
+				conexion := cliente.conn
+				go serv.enviaMensaje(mensaje, conexion)
+			}
 		}
 	}
-	
 }
 
 func (serv *Servidor)enviaMensaje(msg *mensaje.Mensaje, conn net.Conn) error{
@@ -194,7 +194,7 @@ func (serv *Servidor)GetPuerto() int{
 
 //La función GetUsuarios regresa el mapa de usuarios del servidor de forma que
 //no podrá ser modificable.
-func (serv *Servidor)GetUsuarios() map[string]net.Conn{
+func (serv *Servidor)GetUsuarios() map[string]Cliente{
 	return serv.usuarios
 }
 
@@ -206,8 +206,13 @@ func (serv *Servidor)GetSalas() map[string][]string{
 
 //La función cambiaStatus cambiará el status mostrado del usuario que lo
 //solicita.
-func (serv *Servidor)CambiaStatus(status string){
-	
+func (serv *Servidor)CambiaStatus(username, nuevoStatus string){
+	serv.acciones <- func(){
+		if cliente, existe := serv.usuarios[username]; existe{
+			cliente.status = nuevoStatus
+			serv.usuarios[username] = cliente
+		}
+	}
 }
 
 //La función crearSala creará el cuarto que se solicita. 
@@ -227,8 +232,8 @@ func (serv *Servidor)VerListaUsuarios() map[string]string{
 
 	serv.acciones <- func(){
 		lista := make(map[string]string)
-		for nombre := range serv.usuarios{
-			lista[nombre] = serv.status[nombre]
+		for nombre, cliente := range serv.usuarios{
+			lista[nombre] = cliente.status
 		}
 		
 		respuesta <- lista

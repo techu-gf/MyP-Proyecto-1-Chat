@@ -2,31 +2,49 @@ using System;
 
 namespace cliente{
 
+    ///<summary>
+    ///Lector nos ayudará a leer banderas o identificar el comando
+    ///dado en una cadena de texto que dividiremos en arreglos. 
+    ///</summary>
     public class Lector{
 
 	private int puerto = 8080;
 	private string username = string.Empty;
 	private string host = "127.0.0.1";
-	private string tipoOperacion = string.Empty;
 
+	///<summary>
+	///Constructor del Lector.
+	///</summary>
 	public Lector(){}
 
+	///<summary>
+	///Regresa el puerto predeterminado o el obtenido por las banderas.
+	///</summary>
+	///<returns>Puerto indicado en las banderas.
 	public int GetPuerto(){
 	    return puerto;
 	}
 
+	///<summary>
+	///Regresa el nombre de usuario obtenido por las banderas.
+	///</summary>
+	///</returns>Nombre de usuario indicado en las banderas.
 	public string GetUsername(){
 	    return username;
 	}
 
+	///<summary>
+	///Regresa la IP obtenido por las banderas.
+	///</summary>
+	///</returns>IP indicado en las banderas.
 	public string GetHost(){
 	    return host;
 	}
 
-	public string GetOperacion(){
-	    return tipoOperacion;
-	}
-
+	///<summary>
+	///Procesa el arreglo de cadenas buscando el puerto, el host y el username.
+	///</summary>
+	///<param name="args">Arreglo de cadenas a procesar.
 	public void ProcesaArgs(string[] args){
 	    bool hayPuerto = false;
 	    bool hayUsername = false;
@@ -104,6 +122,13 @@ namespace cliente{
 	    } 
 	}
 
+	///<summary>
+	///Procesa el arreglo de cadenas buscando identificar el tipo de
+	///comando que tiene y si cumple con las características necesarias.
+	///</summary>
+	///<param name="comando">Arreglo de cadenas a procesar.
+	///<returns>True si es un comando válido y cumple con lo necesario.
+	///False en otros casos.
 	public bool ProcesaComando(string[] comando){
 	    if(comando == null || comando.Length == 0){
 		return false;
@@ -113,10 +138,15 @@ namespace cliente{
 		case "/list":
 		case "/quit":
 		    return true;
+
+		case "/status":
+		    if(comando.Length < 2){
+			return false;
+		    }
+		    return true;
 		    
-		case "/say ":
-		    if(1 > comando.Length){
-			Console.WriteLine("Debe proporcionar el mensaje.");
+		case "/say":
+		    if(comando.Length < 2){
 			return false;
 		    }
 		    return true;
