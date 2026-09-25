@@ -135,8 +135,8 @@ namespace controlador{
 		    break;
 
 		case "/say":
-		    string mensaje = msg.Substring(4);
-		    Mensaje publicText = Mensaje.CrearMensajePublicText(mensaje);
+		    string mensajeSay = msg.Substring(4);
+		    Mensaje publicText = Mensaje.CrearMensajePublicText(mensajeSay);
 		    string publicTextJSON = MensajeAJSON(publicText);
 
 		    cliente.EnviarDatos(publicTextJSON);
@@ -144,7 +144,19 @@ namespace controlador{
 		    vista.AgregaInicio();
 
 		    break;
-		    
+
+		case "/tell":
+		    string usuarioDestino = msgSeparado[1];
+		    string mensajeTell = msg.Substring(7 + usuarioDestino.Length);
+
+		    Mensaje text = Mensaje.CrearMensajeText(usuarioDestino, mensajeTell);
+		    string textJSON = MensajeAJSON(text);
+
+		    cliente.EnviarDatos(textJSON);
+
+		    vista.AgregaInicio();
+
+		    break;
 
 		case "/quit":
 		    DesconectarCliente();
@@ -189,8 +201,13 @@ namespace controlador{
 		    }
 		    break;
 
+		case "TEXT_FROM":
+		    vista.EscribirMensajePrivado(msg?.username, msg?.text);
+		    break;
+
 		case "PUBLIC_TEXT_FROM":
-		    vista.EscribirMensaje(msg?.username, msg?.text);
+		    string textoMensaje = msg?.text?.Substring(1) ?? string.Empty;
+		    vista.EscribirMensaje(msg?.username, textoMensaje);
 		    break;
 
 		case "DISCONNECTED":
@@ -215,7 +232,7 @@ namespace controlador{
 			identificado = true;
 			vista.EscribirMensaje("SISTEMA", "Identificación exitosa. ¡Bienvenido!");
 		    }else{
-			vista.EscribirMensaje("SISTEMA", "Error de identificación ({msg.result}).");
+			vista.EscribirMensaje("SISTEMA", "Error de identificación: " + msg.result);
 		    }
 		    break;
 
@@ -223,14 +240,19 @@ namespace controlador{
 		    vista.EscribirMensaje("SISTEMA", "Se proporciona la lista de usuarios.");
 		    break;
 
+		case "TEXT":
+		    vista.EscribirMensaje("SISTEMA", "No se encontró el usuario de destino: " + msg.extra);
+		    break;
+		    
 		case "INVALID":
 		    if(msg.result == "NOT_IDENTIFIED"){
 			vista.EscribirMensaje("SISTEMA", "Debe identificarse primero. Se le va a desconectar del sistema.");
 
 			DesconectarCliente();
+		    }else if(msg.result == "INVALID"){
+			vista.EscribirMensaje("SISTEMA", "El mensaje está incompleto, con valores innesperados o no se puede reconocer.");
 		    }
-
-		    vista.EscribirMensaje("SISTEMA", "El mensaje está incompleto, con valores innesperados o no se puede reconocer.");
+		    
 		    break;
 	    }
 	}

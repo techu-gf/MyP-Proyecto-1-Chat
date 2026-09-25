@@ -150,6 +150,12 @@ namespace cliente{
 			return false;
 		    }
 		    return true;
+
+		case "/tell":
+		    if(comando.Length < 3){
+			return false;
+		    }
+		    return true;
 		    
 		default:
 		    return false;

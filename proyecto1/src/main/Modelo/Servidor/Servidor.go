@@ -162,6 +162,22 @@ func (serv *Servidor)Broadcast(usuario string, mensaje *mensaje.Mensaje){
 	}
 }
 
+func (serv *Servidor)MensajeDirecto(usuario string, mensaje *mensaje.Mensaje) bool{
+	mandaMensaje := make(chan bool)
+	
+	serv.acciones <- func() {
+		if cliente, existe := serv.usuarios[usuario]; existe{
+			conexion := cliente.conn
+			go serv.enviaMensaje(mensaje, conexion)
+			mandaMensaje <- true
+		}else{
+			mandaMensaje <- false
+		}
+	}
+
+	return <- mandaMensaje
+}
+
 func (serv *Servidor)enviaMensaje(msg *mensaje.Mensaje, conn net.Conn) error{
 	if msg == nil{
 		return fmt.Errorf("No se puede mandar un mensaje nulo.\n")
@@ -226,7 +242,7 @@ func (serv *Servidor)AgregarUsuarioSala(nombreSala, nombreUsuario string){
 	
 }
 
-//La función verListaUsuarios dará la lista de usuarios dentro de una sala.
+//La función verListaUsuarios dará la lista de usuarios.
 func (serv *Servidor)VerListaUsuarios() map[string]string{
 	respuesta := make(chan map[string]string)
 

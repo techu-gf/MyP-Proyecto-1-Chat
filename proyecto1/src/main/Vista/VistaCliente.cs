@@ -37,6 +37,21 @@ namespace vista{
 	    }
 	}
 
+	public void EscribirMensajePrivado(string? sender, string? msg){
+	    lock(lockEscritura){
+		int posicionActual = Console.CursorTop;
+		Console.SetCursorPosition(0, posicionActual);
+		Console.Write(new string(' ', Console.WindowWidth - 1));
+		Console.SetCursorPosition(0, posicionActual);
+
+		Console.ForegroundColor = ConsoleColor.Yellow;
+		Console.WriteLine($"<{sender}> : {msg}");
+		Console.ResetColor();
+		
+		Console.Write("> " + textoTerminal);
+	    }
+	}
+
 	///<summary>
 	///Lee lo que escriba el usuario en la terminal.
 	///</summary>
