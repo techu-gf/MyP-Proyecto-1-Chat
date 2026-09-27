@@ -144,6 +144,19 @@ namespace controlador{
 		    vista.AgregaInicio();
 
 		    break;
+
+		case "/tell":
+		    string usuarioDestino = msgSeparado[1];
+		    string mensajeTell = msg.Substring(7 + usuarioDestino.Length);
+
+		    Mensaje text = Mensaje.CrearMensajeText(usuarioDestino, mensajeTell);
+		    string textJSON = MensajeAJSON(text);
+
+		    cliente.EnviarDatos(textJSON);
+
+		    vista.AgregaInicio();
+
+		    break;
 		    
 
 		case "/createR":
@@ -222,6 +235,10 @@ namespace controlador{
 		    }
 		    break;
 
+		case "TEXT_FROM":
+		    vista.EscribirMensajePrivado(msg?.username, msg?.text);
+		    break;
+
 		case "PUBLIC_TEXT_FROM":
 		    vista.EscribirMensaje(msg?.username, msg?.text);
 		    break;
@@ -231,7 +248,7 @@ namespace controlador{
 		    break;
 
 		case "JOINED_ROOM":
-		    vista.EscribirMensajeCuarto("SISTEMA", msg.username + "se ha unido a " + msg.roomname);
+		    vista.EscribirMensajeCuarto("SISTEMA", msg.username + " se ha unido a " + msg.roomname);
 		    break;
 
 		case "LEFT_ROOM":
@@ -260,16 +277,14 @@ namespace controlador{
 			identificado = true;
 			vista.EscribirMensaje("SISTEMA", "Identificación exitosa. ¡Bienvenido!");
 		    }else{
-			vista.EscribirMensaje("SISTEMA", "Error de identificación ({msg.result}).");
+			vista.EscribirMensaje("SISTEMA", "Error de identificación: " + msg.result);
 		    }
 		    break;
 
 		case "USER_LIST":
 		    vista.EscribirMensaje("SISTEMA", "Se proporciona la lista de usuarios.");
 		    break;
-
-<<<<<<< Updated upstream
-=======
+		    
 		case "TEXT":
 		    vista.EscribirMensaje("SISTEMA", "No se encontró el usuario de destino: " + msg.extra);
 		    break;
@@ -308,7 +323,6 @@ namespace controlador{
 		    }
 		    break;
 		    
->>>>>>> Stashed changes
 		case "INVALID":
 		    if(msg.result == "NOT_IDENTIFIED"){
 			vista.EscribirMensaje("SISTEMA", "Debe identificarse primero. Se le va a desconectar del sistema.");

@@ -72,7 +72,7 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 			ctrl.OperacionInvalida(conn, "INVALID")
 			return false
 		}
-
+		
 		err := ctrl.serv.NuevoUsuario(nombre, conn)
 
 		if err != nil{
@@ -113,6 +113,17 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 		ctrl.EnviarMensaje(msgUserList, conn)
 
 		return true
+
+		case "TEXT":
+		msgTextFrom := mensaje.CrearMensajeTextFrom(*usuario, msgSinJSON.Text)
+		mandaMensaje := ctrl.serv.MensajeDirecto(msgSinJSON.Username, msgTextFrom)
+
+		if !mandaMensaje{
+			msgResponseText := mensaje.CrearMensajeResponse("TEXT", "NO_SUCH_USER", msgSinJSON.Username)
+			ctrl.EnviarMensaje(msgResponseText, conn)
+		}
+
+		return true;
 
 		case "PUBLIC_TEXT":
 		msgPublicText := mensaje.CrearMensajePublicTextFrom(*usuario, msgSinJSON.Text)

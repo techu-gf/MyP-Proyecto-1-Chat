@@ -137,29 +137,38 @@ func (serv *Servidor)NuevoUsuario(username string, conn net.Conn) error {
 //La función DesconectarUsuario buscará y eliminará del servidor al usuario
 //que lo solicite.
 func (serv *Servidor)DesconectarUsuario(username string){
+	var cuartos []string
+	
 	serv.acciones <- func(){
 		if _,existe := serv.usuarios[username]; existe{
+			for nombreCuarto, cuarto := range serv.cuartos{
+				if _, enCuarto := cuarto.usuarios[username]; enCuarto{
+					msgLeftRoom := mensaje.CrearMensajeLeftRoom(nombreCuarto, username)	
+					for usuarioDestino, cliente := range cuarto.usuarios{
+						if usuarioDestino != username{
+							conexion := cliente.conn
+							go serv.enviaMensaje(msgLeftRoom, conexion)
+						}
+					}
+					
+					vacio := cuarto.EliminarUsuario(username)
+
+					if vacio{
+						delete(serv.cuartos, nombreCuarto)
+					}else{
+						serv.cuartos[nombreCuarto] = cuarto
+					}
+
+					fmt.Printf("%s se ha desconectado del cuarto %s.\n", username, nombreCuarto)
+					cuartos = append(cuartos, nombreCuarto)
+				}
+			}
 			delete(serv.usuarios, username)
 
 			fmt.Printf("%s se ha desconectado.\n", username)
 		}
-
-		for nombreCuarto, cuarto := range serv.cuartos{
-
-			_, enCuarto := cuarto.usuarios[username]
-			
-			err := serv.EliminarUsuarioSala(username, nombreCuarto)
-
-			if err == nil && enCuarto{
-				msgLeftRoom := mensaje.CrearMensajeLeftRoom(nombreCuarto, username)
-
-				for _, clienteCuarto := range cuarto.usuarios{
-					go serv.enviaMensaje(msgLeftRoom, clienteCuarto.conn)
-				}
-			}
-		}
 	}
-
+	
 	mensaje := mensaje.CrearMensajeDisconnected(username)
 	serv.Broadcast(username, mensaje)
 }
@@ -177,8 +186,7 @@ func (serv *Servidor)Broadcast(usuario string, mensaje *mensaje.Mensaje){
 	}
 }
 
-<<<<<<< Updated upstream
-=======
+
 func (serv *Servidor)MensajeDirecto(usuario string, mensaje *mensaje.Mensaje) bool{
 	mandaMensaje := make(chan bool)
 	
@@ -197,16 +205,17 @@ func (serv *Servidor)MensajeDirecto(usuario string, mensaje *mensaje.Mensaje) bo
 
 func (serv *Servidor)MensajeSala(usuario, sala string, mensaje *mensaje.Mensaje){
 	serv.acciones <- func() {
-		for usuarioDestino, cliente := range serv.cuartos[sala].usuarios{
-			if usuarioDestino != usuario{
-				conexion := cliente.conn
-				go serv.enviaMensaje(mensaje, conexion)
+		if cuarto, existe := serv.cuartos[sala]; existe{
+			for usuarioDestino, cliente := range cuarto.usuarios{
+				if usuarioDestino != usuario{
+					conexion := cliente.conn
+					go serv.enviaMensaje(mensaje, conexion)
+				}
 			}
 		}
 	}
 }
 
->>>>>>> Stashed changes
 func (serv *Servidor)enviaMensaje(msg *mensaje.Mensaje, conn net.Conn) error{
 	if msg == nil{
 		return fmt.Errorf("No se puede mandar un mensaje nulo.\n")
@@ -270,20 +279,27 @@ func (serv *Servidor)CrearSala(nombreSala, nombreUsuario string) error{
 			return
 		}
 
+		cliente, existeCliente := serv.usuarios[nombreUsuario]
+		if !existeCliente{
+			respuesta <- fmt.Errorf("No existe el usuario %s", nombreUsuario)
+			return
+		}
+		
 		nuevoCuarto := CrearCuarto(nombreSala)
+		agregado := nuevoCuarto.AgregarUsuarioSala(nombreUsuario, cliente.status, cliente.conn)
+		
+		if !agregado{
+			respuesta <- fmt.Errorf("Error al agregar al usuario")
+			return
+		}
+		
 		serv.cuartos[nombreSala] = nuevoCuarto
 
 		respuesta <- nil
 		fmt.Printf("Se creó la sala %s.\n", nombreSala)
 	}
 
-	err := <- respuesta
-
-	if err != nil{
-		return err
-	}
-	
-	return serv.AgregarUsuarioSala(nombreSala, nombreUsuario)
+	return <- respuesta
 }
 
 func (serv *Servidor)InvitarUsuarioSala(usuario, nombreCuarto, invitado string) error{
@@ -332,6 +348,7 @@ func (serv *Servidor)InvitarUsuarioSala(usuario, nombreCuarto, invitado string) 
 //especificada. 
 func (serv *Servidor)AgregarUsuarioSala(nombreCuarto, nombreUsuario string) error{
 	respuesta := make(chan error)
+	var msgJoinRoom *mensaje.Mensaje
 
 	serv.acciones <- func(){
 		cuarto, existe := serv.cuartos[nombreCuarto]
@@ -357,10 +374,21 @@ func (serv *Servidor)AgregarUsuarioSala(nombreCuarto, nombreUsuario string) erro
 		
 		serv.cuartos[nombreCuarto] = cuarto
 		respuesta <- nil
+
+		msgJoinRoom = mensaje.CrearMensajeJoinedRoom(nombreCuarto, nombreUsuario)
+		
 		fmt.Printf("%s se ha unido al cuarto %s.\n", nombreUsuario, nombreCuarto)
 	}
 
-	return <- respuesta
+	err := <- respuesta
+	
+	if err != nil{
+		return err
+	}
+	
+	serv.MensajeSala(nombreUsuario, nombreCuarto, msgJoinRoom)
+
+	return nil
 }
 
 //La función EliminarUsuarioSala eliminará al usuario solicitado de una sala

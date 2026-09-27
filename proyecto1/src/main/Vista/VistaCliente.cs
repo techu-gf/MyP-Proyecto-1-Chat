@@ -33,9 +33,7 @@ namespace vista{
 	        AgregaInicio();
 	    }
 	}
-
-<<<<<<< Updated upstream
-=======
+	
 	public void EscribirMensajePrivado(string? sender, string? msg){
 	    lock(lockEscritura){
 		borraTextoActual();
@@ -66,8 +64,7 @@ namespace vista{
 	    Console.Write(new string(' ', Console.WindowWidth - 1));
 	    Console.SetCursorPosition(0, posicionActual);
 	}
-
->>>>>>> Stashed changes
+	
 	///<summary>
 	///Lee lo que escriba el usuario en la terminal.
 	///</summary>

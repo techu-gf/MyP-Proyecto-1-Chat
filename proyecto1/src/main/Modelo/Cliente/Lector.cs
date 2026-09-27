@@ -150,9 +150,7 @@ namespace cliente{
 			return false;
 		    }
 		    return true;
-<<<<<<< Updated upstream
-=======
-
+		    
 		case "/tell":
 		    if(comando.Length < 3){
 			return false;
@@ -176,7 +174,6 @@ namespace cliente{
 			return false;
 		    }
 		    return true;
->>>>>>> Stashed changes
 		    
 		default:
 		    return false;
