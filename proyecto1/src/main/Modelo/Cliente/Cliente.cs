@@ -39,8 +39,8 @@ namespace cliente{
 		reader = new StreamReader(stream);
 		writer = new StreamWriter(stream) {AutoFlush = true};
 		conectado = true;
-	    }catch(SocketException e){
-		Console.WriteLine($"Servidor no encendido o puerto cerrado: {e}");
+	    }catch(SocketException){
+		Console.WriteLine("Servidor no encendido o puerto cerrado.");
 		throw;
 	    }
 	}

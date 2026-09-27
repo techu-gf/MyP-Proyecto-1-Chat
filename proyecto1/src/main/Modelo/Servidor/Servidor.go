@@ -25,18 +25,18 @@ type Cliente struct{
 type Servidor struct{
 	puerto int
 	usuarios map[string]Cliente
-	salas map[string][]string
+	cuartos map[string]*Cuarto
 	acciones chan func() 
 	broadcast chan []byte
 }
 
-//La función LevantarServidor da por iniciado el Servidor y se define 
+//La función CrearServidor da por iniciado el Servidor y se define 
 //el puerto. Se crea el mapa vacío para usuarios y salas. 
 func CrearServidor(puertoDado int) *Servidor{
 	return &Servidor{
 		puerto : puertoDado,
 		usuarios : make(map[string]Cliente),
-		salas : make(map[string][]string),
+		cuartos : make(map[string]*Cuarto),
 		acciones : make(chan func()),
 		broadcast : make(chan []byte),
 	}
@@ -56,7 +56,7 @@ func (serv *Servidor)Iniciar(procesarMensajeFunc func(msg []byte, conn net.Conn,
 	fmt.Printf("Servidor activo en el puerto %d.\n", serv.puerto)
 	
 	go func() {
-		for {
+		for{
 			conn, err := ln.Accept()
 
 			if err != nil {
@@ -138,10 +138,25 @@ func (serv *Servidor)NuevoUsuario(username string, conn net.Conn) error {
 //que lo solicite.
 func (serv *Servidor)DesconectarUsuario(username string){
 	serv.acciones <- func(){
-		if _,existe := serv.usuarios[username] ; existe{
+		if _,existe := serv.usuarios[username]; existe{
 			delete(serv.usuarios, username)
 
 			fmt.Printf("%s se ha desconectado.\n", username)
+		}
+
+		for nombreCuarto, cuarto := range serv.cuartos{
+
+			_, enCuarto := cuarto.usuarios[username]
+			
+			err := serv.EliminarUsuarioSala(username, nombreCuarto)
+
+			if err == nil && enCuarto{
+				msgLeftRoom := mensaje.CrearMensajeLeftRoom(nombreCuarto, username)
+
+				for _, clienteCuarto := range cuarto.usuarios{
+					go serv.enviaMensaje(msgLeftRoom, clienteCuarto.conn)
+				}
+			}
 		}
 	}
 
@@ -153,8 +168,8 @@ func (serv *Servidor)DesconectarUsuario(username string){
 //función se basa fuertemente en el proyecto https://github.com/Jayant-issar/go-tcp-chat.git
 func (serv *Servidor)Broadcast(usuario string, mensaje *mensaje.Mensaje){
 	serv.acciones <- func() {
-		for usuarioDestino, cliente := range serv.usuarios {
-			if usuarioDestino != usuario {
+		for usuarioDestino, cliente := range serv.usuarios{
+			if usuarioDestino != usuario{
 				conexion := cliente.conn
 				go serv.enviaMensaje(mensaje, conexion)
 			}
@@ -162,6 +177,36 @@ func (serv *Servidor)Broadcast(usuario string, mensaje *mensaje.Mensaje){
 	}
 }
 
+<<<<<<< Updated upstream
+=======
+func (serv *Servidor)MensajeDirecto(usuario string, mensaje *mensaje.Mensaje) bool{
+	mandaMensaje := make(chan bool)
+	
+	serv.acciones <- func() {
+		if cliente, existe := serv.usuarios[usuario]; existe{
+			conexion := cliente.conn
+			go serv.enviaMensaje(mensaje, conexion)
+			mandaMensaje <- true
+		}else{
+			mandaMensaje <- false
+		}
+	}
+
+	return <- mandaMensaje
+}
+
+func (serv *Servidor)MensajeSala(usuario, sala string, mensaje *mensaje.Mensaje){
+	serv.acciones <- func() {
+		for usuarioDestino, cliente := range serv.cuartos[sala].usuarios{
+			if usuarioDestino != usuario{
+				conexion := cliente.conn
+				go serv.enviaMensaje(mensaje, conexion)
+			}
+		}
+	}
+}
+
+>>>>>>> Stashed changes
 func (serv *Servidor)enviaMensaje(msg *mensaje.Mensaje, conn net.Conn) error{
 	if msg == nil{
 		return fmt.Errorf("No se puede mandar un mensaje nulo.\n")
@@ -200,8 +245,8 @@ func (serv *Servidor)GetUsuarios() map[string]Cliente{
 
 //La función GetSalas regresa el mapa de salas del servidor de forma que no
 //podrá ser modificable.
-func (serv *Servidor)GetSalas() map[string][]string{
-	return serv.salas
+func (serv *Servidor)GetSalas() map[string]*Cuarto{
+	return serv.cuartos
 }
 
 //La función cambiaStatus cambiará el status mostrado del usuario que lo
@@ -216,14 +261,135 @@ func (serv *Servidor)CambiaStatus(username, nuevoStatus string){
 }
 
 //La función crearSala creará el cuarto que se solicita. 
-func (serv *Servidor)CrearSala(nombreSala, nombreUsuario string){
+func (serv *Servidor)CrearSala(nombreSala, nombreUsuario string) error{
+	respuesta := make(chan error)
+
+	serv.acciones <- func(){
+		if _,existe := serv.cuartos[nombreSala]; existe{
+			respuesta <- fmt.Errorf("Sala ya existente: %s.\n", nombreSala)
+			return
+		}
+
+		nuevoCuarto := CrearCuarto(nombreSala)
+		serv.cuartos[nombreSala] = nuevoCuarto
+
+		respuesta <- nil
+		fmt.Printf("Se creó la sala %s.\n", nombreSala)
+	}
+
+	err := <- respuesta
+
+	if err != nil{
+		return err
+	}
 	
+	return serv.AgregarUsuarioSala(nombreSala, nombreUsuario)
+}
+
+func (serv *Servidor)InvitarUsuarioSala(usuario, nombreCuarto, invitado string) error{
+	respuesta := make(chan error)
+
+	serv.acciones <- func(){
+		cuarto, existe := serv.cuartos[nombreCuarto]
+
+		if !existe{
+			respuesta <- fmt.Errorf("No existe el cuarto %s", nombreCuarto)
+			return
+		}
+
+		_, existeUsuario := cuarto.usuarios[usuario]
+
+		if !existeUsuario{
+			respuesta <- fmt.Errorf("El usuario %s no está en el cuarto %s", usuario, nombreCuarto)
+			return
+		}
+
+		cliente, existeCliente := serv.usuarios[invitado]
+
+		if !existeCliente{
+			respuesta <- fmt.Errorf("No existe el usuario %s", invitado)
+			return
+		}
+
+		_, existeEnCuarto := cuarto.usuarios[invitado]
+
+		if !existeEnCuarto{
+			cuarto.AgregarInvitado(invitado, cliente.status, cliente.conn)
+		}
+
+		msgInvite := mensaje.CrearMensajeInvitation(usuario, nombreCuarto)
+		conexion := cliente.conn
+		
+		go serv.enviaMensaje(msgInvite, conexion)
+		respuesta <- nil
+		fmt.Printf("%s ha recibido una invitación a la sala %s.\n", invitado, nombreCuarto)
+	}
+
+	return <- respuesta
 }
 
 //La función agregarUsuarioSala agregará al usuario solicitado a una sala
 //especificada. 
-func (serv *Servidor)AgregarUsuarioSala(nombreSala, nombreUsuario string){
+func (serv *Servidor)AgregarUsuarioSala(nombreCuarto, nombreUsuario string) error{
+	respuesta := make(chan error)
+
+	serv.acciones <- func(){
+		cuarto, existe := serv.cuartos[nombreCuarto]
+		if !existe{
+			respuesta <- fmt.Errorf("No existe el cuarto %s", nombreCuarto)
+			return
+		}
+
+		cliente, existeCliente := serv.usuarios[nombreUsuario]
+		if !existeCliente{
+			respuesta <- fmt.Errorf("No existe el usuario %s", nombreUsuario)
+			return
+		}
+
+		vacio := len(cuarto.usuarios) == 0
+
+		agregado := cuarto.AgregarUsuarioSala(nombreUsuario, cliente.status, cliente.conn)
+
+		if !vacio && !agregado{
+			respuesta <- fmt.Errorf("No está en la lista de invitados")
+			return
+		}
+		
+		serv.cuartos[nombreCuarto] = cuarto
+		respuesta <- nil
+		fmt.Printf("%s se ha unido al cuarto %s.\n", nombreUsuario, nombreCuarto)
+	}
+
+	return <- respuesta
+}
+
+//La función EliminarUsuarioSala eliminará al usuario solicitado de una sala
+//especificada. 
+func (serv *Servidor)EliminarUsuarioSala(nombreCuarto, nombreUsuario string) error{
+	cuarto, existeCuarto := serv.cuartos[nombreCuarto]
+
+	if !existeCuarto{
+		return fmt.Errorf("No existe el cuarto %s.\n", nombreCuarto)
+	}
 	
+	_, enCuarto := cuarto.usuarios[nombreUsuario]
+
+	if !enCuarto{
+		delete(cuarto.listaInvitados, nombreUsuario)
+		return fmt.Errorf("El usuario no ha sido invitado o no se ha unido al cuarto %s.\n", nombreCuarto)
+	}
+
+	vacio := cuarto.EliminarUsuario(nombreUsuario)
+
+	if vacio{
+		delete(serv.cuartos, nombreCuarto)
+	}else{
+		serv.cuartos[nombreCuarto] = cuarto
+	}
+	
+	fmt.Printf("%s abandonó el cuarto %s.\n", nombreUsuario, nombreCuarto)
+
+	return nil
 }
 
 //La función verListaUsuarios dará la lista de usuarios dentro de una sala.

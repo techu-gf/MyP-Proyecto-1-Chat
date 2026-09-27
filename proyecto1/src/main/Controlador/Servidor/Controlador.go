@@ -57,7 +57,7 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 		return false;
 	}
 	
-	tipo := msgSinJSON.GetTipo()
+	tipo := msgSinJSON.Tipo
 
 	if *usuario == "" && tipo != "IDENTIFY"{
 		ctrl.OperacionInvalida(conn, "NOT_IDENTIFIED")
@@ -66,9 +66,9 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 
 	switch tipo{
 		case "IDENTIFY":
-		nombre := msgSinJSON.GetUsername()
+		nombre := msgSinJSON.Username
 		
-		if strings.TrimSpace(msgSinJSON.GetUsername()) == ""{
+		if strings.TrimSpace(msgSinJSON.Username) == ""{
 			ctrl.OperacionInvalida(conn, "INVALID")
 			return false
 		}
@@ -92,7 +92,7 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 		return true
 
 		case "STATUS":
-		nuevoStatus := msgSinJSON.GetStatus()
+		nuevoStatus := msgSinJSON.Status
 
 		if nuevoStatus == "ACTIVE" || nuevoStatus == "AWAY" || nuevoStatus == "BUSY"{
 			ctrl.serv.CambiaStatus(*usuario, nuevoStatus)
@@ -115,10 +115,98 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 		return true
 
 		case "PUBLIC_TEXT":
-		msgPublicText := mensaje.CrearMensajePublicTextFrom(*usuario, msgSinJSON.GetText())
+		msgPublicText := mensaje.CrearMensajePublicTextFrom(*usuario, msgSinJSON.Text)
 		ctrl.serv.Broadcast(*usuario, msgPublicText)
 
 		return true;
+
+		case "NEW_ROOM":
+		nombreCuarto := msgSinJSON.Roomname
+
+		if len(nombreCuarto) > 16{
+			ctrl.OperacionInvalida(conn, "INVALID")
+			return true
+		}
+
+		if strings.TrimSpace(nombreCuarto) == ""{
+			ctrl.OperacionInvalida(conn, "INVALID")
+			return true
+		}
+
+		err := ctrl.serv.CrearSala(nombreCuarto, *usuario)
+
+		if err != nil{
+			msgResponseNewRoom := mensaje.CrearMensajeResponse("NEW_ROOM", "ROOM_ALREADY_EXISTS", nombreCuarto)
+			ctrl.EnviarMensaje(msgResponseNewRoom, conn)
+
+			return true;
+		}
+
+		msgResponseSuccess := mensaje.CrearMensajeResponse("NEW_ROOM", "SUCCESS", nombreCuarto)
+		ctrl.EnviarMensaje(msgResponseSuccess, conn)
+
+		return true;
+
+		case "INVITE":
+		listaInvitados := msgSinJSON.Usernames
+		nombreCuarto := msgSinJSON.Roomname
+
+		if len(listaInvitados) == 0{
+			ctrl.OperacionInvalida(conn, "INVALID")
+			return true
+		}
+
+		for _, invitado := range listaInvitados{
+			err := ctrl.serv.InvitarUsuarioSala(*usuario, nombreCuarto, invitado)
+
+			if err != nil{
+				errS := err.Error()
+				
+				errorCuarto := "No existe el cuarto " + nombreCuarto
+				errorUsuarioSolicitante := "El usuario " + *usuario + " no está en el cuarto " + nombreCuarto
+				errorUsuario := "No existe el usuario " + invitado
+				
+				if errS == errorCuarto{
+					msgNoSuchRoom := mensaje.CrearMensajeResponse("INVITE", "NO_SUCH_ROOM", nombreCuarto)
+					ctrl.EnviarMensaje(msgNoSuchRoom, conn)
+					return true;
+				}else if errS == errorUsuarioSolicitante{
+					ctrl.OperacionInvalida(conn, "INVALID")
+				}else if errS == errorUsuario{
+					msgNoSuchUser := mensaje.CrearMensajeResponse("INVITE", "NO_SUCH_USER", invitado)
+					ctrl.EnviarMensaje(msgNoSuchUser, conn)
+					return true;
+				}
+			}
+		}
+
+		return true
+
+		case "JOIN_ROOM":
+		nombreCuarto := msgSinJSON.Roomname
+		err := ctrl.serv.AgregarUsuarioSala(nombreCuarto, *usuario)
+
+		if err != nil{
+			errS := err.Error()
+			
+			errorCuarto := "No existe el cuarto " + nombreCuarto
+			errorUsuario := "No está en la lista de invitados"
+			
+			if errS == errorCuarto{
+				msgNoSuchRoom := mensaje.CrearMensajeResponse("JOIN_ROOM", "NO_SUCH_ROOM", nombreCuarto)
+				ctrl.EnviarMensaje(msgNoSuchRoom, conn)
+				return true
+			}else if errS == errorUsuario{
+				msgNotInvited := mensaje.CrearMensajeResponse("JOIN_ROOM", "NOT_INVITED", nombreCuarto)
+				ctrl.EnviarMensaje(msgNotInvited, conn)
+				return true
+			}
+		}
+
+		msgJoinRoom := mensaje.CrearMensajeResponse("JOIN_ROOM", "SUCCESS", nombreCuarto)
+		ctrl.EnviarMensaje(msgJoinRoom, conn)
+
+		return true
 
 		case "DISCONNECT":
 		if *usuario != ""{

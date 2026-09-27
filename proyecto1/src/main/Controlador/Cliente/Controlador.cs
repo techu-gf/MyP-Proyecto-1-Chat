@@ -146,6 +146,39 @@ namespace controlador{
 		    break;
 		    
 
+		case "/createR":
+		    string nombreCuarto = msgSeparado[1];
+		    Mensaje cuarto = Mensaje.CrearMensajeNewRoom(nombreCuarto);
+		    string cuartoJSON = MensajeAJSON(cuarto);
+
+		    cliente.EnviarDatos(cuartoJSON);
+
+		    break;
+
+		case "/addR":
+		    string nombreCuartoInvitacion = msgSeparado[1];
+		    string[] invitados = msgSeparado[2].Split(',');
+		    List<string> invitadosLista = new List<string>(invitados);
+
+		    Mensaje invite = Mensaje.CrearMensajeInvite(nombreCuartoInvitacion, invitadosLista);
+		    string inviteJSON = MensajeAJSON(invite);
+
+		    cliente.EnviarDatos(inviteJSON);
+
+		    vista.AgregaInicio();
+
+		    break;
+
+		case "/joinR":
+		    string nombreCuartoAceptado = msgSeparado[1];
+
+		    Mensaje aceptar = Mensaje.CrearMensajeJoinRoom(nombreCuartoAceptado);
+		    string aceptarJSON = MensajeAJSON(aceptar);
+
+		    cliente.EnviarDatos(aceptarJSON);
+
+		    break;
+
 		case "/quit":
 		    DesconectarCliente();
 		    break;
@@ -193,6 +226,18 @@ namespace controlador{
 		    vista.EscribirMensaje(msg?.username, msg?.text);
 		    break;
 
+		case "INVITATION":
+		    vista.EscribirMensajeCuarto("SISTEMA", msg.username + " te ha invitado al cuarto " + msg.roomname);
+		    break;
+
+		case "JOINED_ROOM":
+		    vista.EscribirMensajeCuarto("SISTEMA", msg.username + "se ha unido a " + msg.roomname);
+		    break;
+
+		case "LEFT_ROOM":
+		    vista.EscribirMensajeCuarto("SISTEMA", msg.username + " ha abandonado el cuarto " + msg.roomname);
+		    break;
+
 		case "DISCONNECTED":
 		    vista.EscribirMensaje("SISTEMA", msg.username + " se ha desconectado.");
 		    break;
@@ -223,6 +268,47 @@ namespace controlador{
 		    vista.EscribirMensaje("SISTEMA", "Se proporciona la lista de usuarios.");
 		    break;
 
+<<<<<<< Updated upstream
+=======
+		case "TEXT":
+		    vista.EscribirMensaje("SISTEMA", "No se encontró el usuario de destino: " + msg.extra);
+		    break;
+
+		case "NEW_ROOM":
+		    if(msg.result == "SUCCESS"){
+			vista.EscribirMensajeCuarto("SISTEMA", "Se creó exitosamente el cuarto " + msg.extra);
+		    }else if(msg.result == "ROOM_ALREADY_EXISTS"){
+			vista.EscribirMensajeCuarto("SISTEMA", "El nombre del cuarto " + msg.extra + " ya está en uso.");
+		    }
+		    break;
+
+		case "INVITE":
+		    if(msg.result == "NO_SUCH_ROOM"){
+			vista.EscribirMensajeCuarto("SISTEMA", "No existe el cuarto " + msg.extra);
+		    }else if(msg.result == "NO_SUCH_USER"){
+			vista.EscribirMensajeCuarto("SISTEMA", "No existe el usuario " + msg.extra);
+		    }
+		    break;
+
+		case "JOIN_ROOM":
+		    if(msg.result == "NO_SUCH_ROOM"){
+			vista.EscribirMensajeCuarto("SISTEMA", "El cuarto " + msg.extra + " no existe.");
+		    }else if(msg.result == "NOT_INVITED"){
+			vista.EscribirMensajeCuarto("SISTEMA", "No has sido previamente invitado al cuarto " + msg.extra);
+		    }else if(msg.result == "SUCCESS"){
+			vista.EscribirMensajeCuarto("SISTEMA", "Bienvenid@ a " + msg.extra + "!");
+		    }
+		    break;
+
+		case "LEAVE_ROOM":
+		    if(msg.result == "NO_SUCH_ROOM"){
+			vista.EscribirMensajeCuarto("SISTEMA", "El cuarto " + msg.extra + " no existe.");
+		    }else if(msg.result == "NOT_JOINED"){
+			vista.EscribirMensajeCuarto("SISTEMA", "No ha sido invitado al cuarto o no aceptó la invitación.");
+		    }
+		    break;
+		    
+>>>>>>> Stashed changes
 		case "INVALID":
 		    if(msg.result == "NOT_IDENTIFIED"){
 			vista.EscribirMensaje("SISTEMA", "Debe identificarse primero. Se le va a desconectar del sistema.");
