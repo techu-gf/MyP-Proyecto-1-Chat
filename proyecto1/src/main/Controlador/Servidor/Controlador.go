@@ -234,7 +234,7 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 				ctrl.EnviarMensaje(msgNoSuchRoom, conn)
 				return true
 			}else if errS == errorUsuario{
-				msgNotInvited := mensaje.CrearMensajeResponse("ROOM_USERS", "NOT_INVITED", nombreCuarto)
+				msgNotInvited := mensaje.CrearMensajeResponse("ROOM_USERS", "NOT_JOINED", nombreCuarto)
 				ctrl.EnviarMensaje(msgNotInvited, conn)
 				return true
 			}
@@ -242,6 +242,58 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 		
 		msgUserList := mensaje.CrearMensajeRoomUserList(nombreCuarto, listaUsuariosCuarto)
 		ctrl.EnviarMensaje(msgUserList, conn)
+
+		return true;
+
+		case "ROOM_TEXT":
+		nombreCuarto := msgSinJSON.Roomname
+
+		roomText := mensaje.CrearMensajeRoomTextFrom(nombreCuarto, *usuario, msgSinJSON.Text)
+		err := ctrl.serv.MensajeSala(*usuario, nombreCuarto, roomText)
+
+		if err != nil{
+			errS := err.Error()
+			
+			errorCuarto := "No existe el cuarto " + nombreCuarto
+			errorUsuario := "No está en la lista de usuarios"
+			
+			if errS == errorCuarto{
+				msgNoSuchRoom := mensaje.CrearMensajeResponse("ROOM_TEXT", "NO_SUCH_ROOM", nombreCuarto)
+				ctrl.EnviarMensaje(msgNoSuchRoom, conn)
+				return true
+			}else if errS == errorUsuario{
+				msgNotInvited := mensaje.CrearMensajeResponse("ROOM_TEXT", "NOT_JOINED", nombreCuarto)
+				ctrl.EnviarMensaje(msgNotInvited, conn)
+				return true
+			}
+		}
+
+		return true;
+
+		case "LEAVE_ROOM":
+		nombreCuarto := msgSinJSON.Roomname
+		
+		err := ctrl.serv.EliminarUsuarioSala(nombreCuarto, *usuario)
+
+		if err != nil{
+			errS := err.Error()
+			
+			errorCuarto := "No existe el cuarto " + nombreCuarto
+			errorUsuario := "No está en la lista de usuarios"
+			
+			if errS == errorCuarto{
+				msgNoSuchRoom := mensaje.CrearMensajeResponse("ROOM_TEXT", "NO_SUCH_ROOM", nombreCuarto)
+				ctrl.EnviarMensaje(msgNoSuchRoom, conn)
+				return true
+			}else if errS == errorUsuario{
+				msgNotInvited := mensaje.CrearMensajeResponse("ROOM_TEXT", "NOT_JOINED", nombreCuarto)
+				ctrl.EnviarMensaje(msgNotInvited, conn)
+				return true
+			}
+		}
+
+		msgRoomText := mensaje.CrearMensajeLeftRoom(nombreCuarto, *usuario)
+		ctrl.EnviarMensaje(msgRoomText, conn)
 
 		return true;
 

@@ -186,6 +186,12 @@ namespace cliente{
 			return false;
 		    }
 		    return true;
+
+		case "/leaveR":
+		    if(comando.Length < 2){
+			return false;
+		    }
+		    return true;
 		    
 		default:
 		    return false;

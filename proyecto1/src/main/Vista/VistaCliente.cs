@@ -27,7 +27,7 @@ namespace vista{
 	public void EscribirMensaje(string? sender, string? msg){
 	    lock(lockEscritura){
 	        borraTextoActual();
-
+		
 		Console.WriteLine($"<{sender}> : {msg}");
 		
 	        AgregaInicio();

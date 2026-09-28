@@ -145,7 +145,7 @@ func (serv *Servidor)DesconectarUsuario(username string){
 
 		for nombreCuarto, cuarto := range serv.cuartos{
 			if _, enCuarto := cuarto.usuarios[username]; !enCuarto{
-				return
+				continue
 			}
 
 			msgLeftRoom := mensaje.CrearMensajeLeftRoom(nombreCuarto, username)	
@@ -425,11 +425,21 @@ func (serv *Servidor)EliminarUsuarioSala(nombreCuarto, nombreUsuario string) err
 	if err != nil{
 		return err
 	}
+	
+	msgLeftRoom := mensaje.CrearMensajeLeftRoom(nombreCuarto, nombreUsuario)	
+
+	for usuarioDestino, cliente := range cuarto.usuarios{
+		if usuarioDestino != nombreUsuario{
+			conexion := cliente.conn
+			go serv.enviaMensaje(msgLeftRoom, conexion)
+		}
+	}
 
 	vacio := cuarto.EliminarUsuario(nombreUsuario)
 
 	if vacio{
 		delete(serv.cuartos, nombreCuarto)
+		fmt.Printf("Se eliminó el %s ya que se volvió un cuarto vacío.\n")
 	}else{
 		serv.cuartos[nombreCuarto] = cuarto
 	}

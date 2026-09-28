@@ -135,7 +135,7 @@ namespace controlador{
 		    break;
 
 		case "/say":
-		    string mensaje = msg.Substring(4);
+		    string mensaje = msg.Substring(5);
 		    Mensaje publicText = Mensaje.CrearMensajePublicText(mensaje);
 		    string publicTextJSON = MensajeAJSON(publicText);
 
@@ -204,12 +204,26 @@ namespace controlador{
 
 		case "/sayR":
 		    string nombreCuartoSay = msgSeparado[1];
-		    string mensajeSayR = msg.Substring(6 + nombreCuartoSay.Length);
+		    string mensajeSayR = msg.Substring(7 + nombreCuartoSay.Length);
 
 		    Mensaje roomText = Mensaje.CrearMensajeRoomText(nombreCuartoSay, mensajeSayR);
 		    string roomTextJSON = MensajeAJSON(roomText);
 
 		    cliente.EnviarDatos(roomTextJSON);
+
+		    vista.AgregaInicio();
+
+		    break;
+
+		case "/leaveR":
+		    string nombreCuartoLeave = msgSeparado[1];
+
+		    Mensaje leaveRoom = Mensaje.CrearMensajeLeaveRoom(nombreCuartoLeave);
+		    string leaveRoomJSON = MensajeAJSON(leaveRoom);
+
+		    cliente.EnviarDatos(leaveRoomJSON);
+
+		    vista.AgregaInicio();
 
 		    break;
 
@@ -286,8 +300,9 @@ namespace controlador{
 		    }
 		    break;
 
-		case "ROOM_TEXT_FFROM":
+		case "ROOM_TEXT_FROM":
 		    vista.EscribirMensajeCuarto(msg.username, msg.text);
+		    break;
 
 		case "LEFT_ROOM":
 		    vista.EscribirMensajeCuarto(msg.roomname, msg.username + " ha abandonado el cuarto");
