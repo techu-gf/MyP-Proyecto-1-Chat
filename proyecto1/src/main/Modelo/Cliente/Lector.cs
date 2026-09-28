@@ -174,6 +174,18 @@ namespace cliente{
 			return false;
 		    }
 		    return true;
+
+		case "/listR":
+		    if(comando.Length < 2){
+			return false;
+		    }
+		    return true;
+
+		case "/sayR":
+		    if(comando.Length < 3){
+			return false;
+		    }
+		    return true;
 		    
 		default:
 		    return false;

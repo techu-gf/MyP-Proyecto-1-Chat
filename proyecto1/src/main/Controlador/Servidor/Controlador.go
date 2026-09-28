@@ -174,7 +174,7 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 				errS := err.Error()
 				
 				errorCuarto := "No existe el cuarto " + nombreCuarto
-				errorUsuarioSolicitante := "El usuario " + *usuario + " no está en el cuarto " + nombreCuarto
+				errorUsuarioSolicitante := "No está en la lista de usuarios"
 				errorUsuario := "No existe el usuario " + invitado
 				
 				if errS == errorCuarto{
@@ -218,6 +218,32 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 		ctrl.EnviarMensaje(msgJoinRoom, conn)
 
 		return true
+
+		case "ROOM_USERS":
+		nombreCuarto := msgSinJSON.Roomname
+		listaUsuariosCuarto, err := ctrl.serv.VerListaUsuariosSala(*usuario, nombreCuarto)
+
+		if err != nil{
+			errS := err.Error()
+			
+			errorCuarto := "No existe el cuarto " + nombreCuarto
+			errorUsuario := "No está en la lista de usuarios"
+			
+			if errS == errorCuarto{
+				msgNoSuchRoom := mensaje.CrearMensajeResponse("ROOM_USERS", "NO_SUCH_ROOM", nombreCuarto)
+				ctrl.EnviarMensaje(msgNoSuchRoom, conn)
+				return true
+			}else if errS == errorUsuario{
+				msgNotInvited := mensaje.CrearMensajeResponse("ROOM_USERS", "NOT_INVITED", nombreCuarto)
+				ctrl.EnviarMensaje(msgNotInvited, conn)
+				return true
+			}
+		}
+		
+		msgUserList := mensaje.CrearMensajeRoomUserList(nombreCuarto, listaUsuariosCuarto)
+		ctrl.EnviarMensaje(msgUserList, conn)
+
+		return true;
 
 		case "DISCONNECT":
 		if *usuario != ""{

@@ -147,6 +147,14 @@ func CrearMensajeRoomUsers(roomname string) *Mensaje {
 	}
 }
 
+func CrearMensajeRoomUserList(roomname string, users map[string]string) *Mensaje {
+	return &Mensaje{
+		Tipo : "ROOM_USER_LIST",
+		Roomname : roomname,
+		Users : users,
+	}
+}
+
 func CrearMensajeRoomText(roomname, text string) *Mensaje {
 	return &Mensaje{
 		Tipo : "ROOM_TEXT",
