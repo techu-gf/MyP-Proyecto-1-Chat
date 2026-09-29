@@ -20,7 +20,7 @@ Posicionate en el directorio raíz del proyecto, justo donde se encuentra el arc
 task servidor -- -p <PUERTO>
 ```
 
-donde &ltPUERTO&gt se sustituye por el puerto en el que se encontrará el servidor. En caso de simplemente escribir
+donde &lt;PUERTO&gt; se sustituye por el puerto en el que se encontrará el servidor. En caso de simplemente escribir
 
 ```
 task servidor
@@ -35,7 +35,7 @@ Posicionate en el directorio raíz del proyecto, justo donde se encuentra el arc
 task cliente -- -p <PUERTO> -h <HOST> -u <USUARIO>
 ```
 
-donde &ltPUERTO&gt se sustituye por el puerto en el que está el servidor, &ltHOST&gt se sustituye por la IP donde está el servidor y &ltUSUARIO&gt será el nombre de usuario deseado. En caso de no especificar el host, el valor predeterminado es 127.0.0.1.
+donde &lt;PUERTO&gt; se sustituye por el puerto en el que está el servidor, &lt;HOST&gt; se sustituye por la IP donde está el servidor y &lt;USUARIO&gt; será el nombre de usuario deseado. En caso de no especificar el host, el valor predeterminado es 127.0.0.1.
 
 ## Comandos
 
