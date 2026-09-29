@@ -26,32 +26,45 @@ namespace vista{
 	///<param name="msg">Mensaje que se quiere mandar.
 	public void EscribirMensaje(string? sender, string? msg){
 	    lock(lockEscritura){
-		int posicionActual = Console.CursorTop;
-		Console.SetCursorPosition(0, posicionActual);
-		Console.Write(new string(' ', Console.WindowWidth - 1));
-		Console.SetCursorPosition(0, posicionActual);
-
+	        borraTextoActual();
+		
 		Console.WriteLine($"<{sender}> : {msg}");
 		
-		Console.Write("> " + textoTerminal);
+	        AgregaInicio();
 	    }
 	}
-
+	
 	public void EscribirMensajePrivado(string? sender, string? msg){
 	    lock(lockEscritura){
-		int posicionActual = Console.CursorTop;
-		Console.SetCursorPosition(0, posicionActual);
-		Console.Write(new string(' ', Console.WindowWidth - 1));
-		Console.SetCursorPosition(0, posicionActual);
+		borraTextoActual();
 
 		Console.ForegroundColor = ConsoleColor.Yellow;
 		Console.WriteLine($"<{sender}> : {msg}");
 		Console.ResetColor();
 		
-		Console.Write("> " + textoTerminal);
+	        AgregaInicio();
 	    }
 	}
 
+	public void EscribirMensajeCuarto(string? sender, string? msg){
+	    lock(lockEscritura){
+		borraTextoActual();
+		
+		Console.ForegroundColor = ConsoleColor.Cyan;
+		Console.WriteLine($"<{sender}> : {msg}");
+		Console.ResetColor();
+		
+	        AgregaInicio();
+	    }
+	}
+
+	private void borraTextoActual(){
+	    int posicionActual = Console.CursorTop;
+	    Console.SetCursorPosition(0, posicionActual);
+	    Console.Write(new string(' ', Console.WindowWidth - 1));
+	    Console.SetCursorPosition(0, posicionActual);
+	}
+	
 	///<summary>
 	///Lee lo que escriba el usuario en la terminal.
 	///</summary>

@@ -147,6 +147,14 @@ func CrearMensajeRoomUsers(roomname string) *Mensaje {
 	}
 }
 
+func CrearMensajeRoomUserList(roomname string, users map[string]string) *Mensaje {
+	return &Mensaje{
+		Tipo : "ROOM_USER_LIST",
+		Roomname : roomname,
+		Users : users,
+	}
+}
+
 func CrearMensajeRoomText(roomname, text string) *Mensaje {
 	return &Mensaje{
 		Tipo : "ROOM_TEXT",
@@ -194,44 +202,4 @@ func CrearMensajeDisconnected(username string) *Mensaje {
 
 func (msg *Mensaje)EsValido() bool {
 	return strings.TrimSpace(msg.Tipo) != ""
-}
-
-func (msg *Mensaje)GetTipo() string {
-	return msg.Tipo
-}
-
-func (msg *Mensaje)GetUsername() string {
-	return msg.Username
-}
-
-func (msg *Mensaje)GetOperation() string {
-	return msg.Operation
-}
-
-func (msg *Mensaje)GetResult() string {
-	return msg.Result
-}
-
-func (msg *Mensaje)GetExtra() string {
-	return msg.Extra
-}
-
-func (msg *Mensaje)GetStatus() string {
-	return msg.Status
-}
-
-func (msg *Mensaje)GetUsers() map[string]string {
-	return msg.Users
-}
-
-func (msg *Mensaje)GetUsernames() []string {
-	return msg.Usernames
-}
-
-func (msg *Mensaje)GetText() string {
-	return msg.Text
-}
-
-func (msg *Mensaje)GetRoomname() string {
-	return msg.Roomname
 }

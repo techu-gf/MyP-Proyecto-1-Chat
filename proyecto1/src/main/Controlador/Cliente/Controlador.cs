@@ -64,15 +64,19 @@ namespace controlador{
 
 	    string? msgServidor = cliente.Leer();
 
-	    if(msgServidor != null){
-		Mensaje? msg = MensajeSinJSON(msgServidor);
-
-		if(msg != null){
-		    ProcesaMensajeServidor(msg);
-		}
-
-		EscucharServidor();
+	    if(msgServidor == null){
+		cliente.Desconectar();
+		Environment.Exit(0);
+		return;
 	    }
+	    
+	    Mensaje? msg = MensajeSinJSON(msgServidor);
+	    
+	    if(msg != null){
+		ProcesaMensajeServidor(msg);
+	    }
+
+	    EscucharServidor();
 	}
 
 	///<summary>
@@ -135,8 +139,8 @@ namespace controlador{
 		    break;
 
 		case "/say":
-		    string mensajeSay = msg.Substring(4);
-		    Mensaje publicText = Mensaje.CrearMensajePublicText(mensajeSay);
+		    string mensaje = msg.Substring(5);
+		    Mensaje publicText = Mensaje.CrearMensajePublicText(mensaje);
 		    string publicTextJSON = MensajeAJSON(publicText);
 
 		    cliente.EnviarDatos(publicTextJSON);
@@ -153,6 +157,75 @@ namespace controlador{
 		    string textJSON = MensajeAJSON(text);
 
 		    cliente.EnviarDatos(textJSON);
+
+		    vista.AgregaInicio();
+
+		    break;
+		    
+
+		case "/createR":
+		    string nombreCuarto = msgSeparado[1];
+		    Mensaje cuarto = Mensaje.CrearMensajeNewRoom(nombreCuarto);
+		    string cuartoJSON = MensajeAJSON(cuarto);
+
+		    cliente.EnviarDatos(cuartoJSON);
+
+		    break;
+
+		case "/addR":
+		    string nombreCuartoInvitacion = msgSeparado[1];
+		    string[] invitados = msgSeparado[2].Split(',');
+		    List<string> invitadosLista = new List<string>(invitados);
+
+		    Mensaje invite = Mensaje.CrearMensajeInvite(nombreCuartoInvitacion, invitadosLista);
+		    string inviteJSON = MensajeAJSON(invite);
+
+		    cliente.EnviarDatos(inviteJSON);
+
+		    vista.AgregaInicio();
+
+		    break;
+
+		case "/joinR":
+		    string nombreCuartoAceptado = msgSeparado[1];
+
+		    Mensaje aceptar = Mensaje.CrearMensajeJoinRoom(nombreCuartoAceptado);
+		    string aceptarJSON = MensajeAJSON(aceptar);
+
+		    cliente.EnviarDatos(aceptarJSON);
+
+		    break;
+
+		case "/listR":
+		    string nombreCuartoLista = msgSeparado[1];
+
+		    Mensaje listaCuarto = Mensaje.CrearMensajeRoomUsers(nombreCuartoLista);
+		    string listaCuartoJSON = MensajeAJSON(listaCuarto);
+
+		    cliente.EnviarDatos(listaCuartoJSON);
+
+		    break;
+
+		case "/sayR":
+		    string nombreCuartoSay = msgSeparado[1];
+		    string mensajeSayR = msg.Substring(7 + nombreCuartoSay.Length);
+
+		    Mensaje roomText = Mensaje.CrearMensajeRoomText(nombreCuartoSay, mensajeSayR);
+		    string roomTextJSON = MensajeAJSON(roomText);
+
+		    cliente.EnviarDatos(roomTextJSON);
+
+		    vista.AgregaInicio();
+
+		    break;
+
+		case "/leaveR":
+		    string nombreCuartoLeave = msgSeparado[1];
+
+		    Mensaje leaveRoom = Mensaje.CrearMensajeLeaveRoom(nombreCuartoLeave);
+		    string leaveRoomJSON = MensajeAJSON(leaveRoom);
+
+		    cliente.EnviarDatos(leaveRoomJSON);
 
 		    vista.AgregaInicio();
 
@@ -206,8 +279,37 @@ namespace controlador{
 		    break;
 
 		case "PUBLIC_TEXT_FROM":
-		    string textoMensaje = msg?.text?.Substring(1) ?? string.Empty;
-		    vista.EscribirMensaje(msg?.username, textoMensaje);
+		    vista.EscribirMensaje(msg?.username, msg?.text);
+		    break;
+
+		case "INVITATION":
+		    vista.EscribirMensajeCuarto("SISTEMA", msg.username + " te ha invitado al cuarto " + msg.roomname);
+		    break;
+
+		case "JOINED_ROOM":
+		    vista.EscribirMensajeCuarto(msg.roomname, msg.username + " se ha unido");
+		    break;
+
+		case "ROOM_USER_LIST":
+		    if(msg.users != null){
+			StringBuilder respuesta = new StringBuilder("Lista de usuarios: ");
+
+			foreach (KeyValuePair<string, string> usuario in msg.users){
+			    respuesta.Append($"\n\t{usuario.Key} - {usuario.Value}");
+			}
+		    
+			vista.EscribirMensajeCuarto(msg.roomname, respuesta.ToString());
+		    }else{
+			vista.EscribirMensajeCuarto(msg.roomname, "No hay usuarios.");
+		    }
+		    break;
+
+		case "ROOM_TEXT_FROM":
+		    vista.EscribirMensajeCuarto(msg.username, msg.text);
+		    break;
+
+		case "LEFT_ROOM":
+		    vista.EscribirMensajeCuarto(msg.roomname, msg.username + " ha abandonado el cuarto");
 		    break;
 
 		case "DISCONNECTED":
@@ -239,9 +341,35 @@ namespace controlador{
 		case "USER_LIST":
 		    vista.EscribirMensaje("SISTEMA", "Se proporciona la lista de usuarios.");
 		    break;
-
+		    
 		case "TEXT":
 		    vista.EscribirMensaje("SISTEMA", "No se encontró el usuario de destino: " + msg.extra);
+		    break;
+
+		case "NEW_ROOM":
+		    if(msg.result == "SUCCESS"){
+			vista.EscribirMensajeCuarto("SISTEMA", "Se creó exitosamente el cuarto " + msg.extra);
+		    }else if(msg.result == "ROOM_ALREADY_EXISTS"){
+			vista.EscribirMensajeCuarto("SISTEMA", "El nombre del cuarto " + msg.extra + " ya está en uso.");
+		    }
+		    break;
+
+		case "INVITE":
+		case "JOIN_ROOM":
+		case "ROOM_USERS":
+		case "LEAVE_ROOM":
+		case "ROOM_TEXT":
+		    if(msg.result == "NO_SUCH_ROOM"){
+			vista.EscribirMensajeCuarto("SISTEMA",  "El cuarto " + msg.extra + " no existe.");
+		    }else if(msg.result == "NO_SUCH_USER"){
+			vista.EscribirMensajeCuarto("SISTEMA", "No existe el usuario " + msg.extra);
+		    }else if(msg.result == "NOT_INVITED"){
+			vista.EscribirMensajeCuarto("SISTEMA", "No has sido previamente invitado al cuarto " + msg.extra);
+		    }else if(msg.result == "NOT_JOINED"){
+			vista.EscribirMensajeCuarto("SISTEMA", "No has sido invitado o no has aceptado la invitación al cuarto " + msg.extra);
+		    }else if(msg.result == "SUCCESS"){
+			vista.EscribirMensajeCuarto("SISTEMA", "Bienvenid@ a " + msg.extra + "!");
+		    }
 		    break;
 		    
 		case "INVALID":
@@ -249,10 +377,9 @@ namespace controlador{
 			vista.EscribirMensaje("SISTEMA", "Debe identificarse primero. Se le va a desconectar del sistema.");
 
 			DesconectarCliente();
-		    }else if(msg.result == "INVALID"){
-			vista.EscribirMensaje("SISTEMA", "El mensaje está incompleto, con valores innesperados o no se puede reconocer.");
 		    }
-		    
+
+		    vista.EscribirMensaje("SISTEMA", "El mensaje está incompleto, con valores innesperados o no se puede reconocer. Se le desconectará del servidor");
 		    break;
 	    }
 	}
