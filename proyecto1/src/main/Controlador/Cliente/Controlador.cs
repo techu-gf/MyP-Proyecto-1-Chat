@@ -64,15 +64,19 @@ namespace controlador{
 
 	    string? msgServidor = cliente.Leer();
 
-	    if(msgServidor != null){
-		Mensaje? msg = MensajeSinJSON(msgServidor);
-
-		if(msg != null){
-		    ProcesaMensajeServidor(msg);
-		}
-
-		EscucharServidor();
+	    if(msgServidor == null){
+		cliente.Desconectar();
+		Environment.Exit(0);
+		return;
 	    }
+	    
+	    Mensaje? msg = MensajeSinJSON(msgServidor);
+	    
+	    if(msg != null){
+		ProcesaMensajeServidor(msg);
+	    }
+
+	    EscucharServidor();
 	}
 
 	///<summary>
@@ -375,7 +379,7 @@ namespace controlador{
 			DesconectarCliente();
 		    }
 
-		    vista.EscribirMensaje("SISTEMA", "El mensaje está incompleto, con valores innesperados o no se puede reconocer.");
+		    vista.EscribirMensaje("SISTEMA", "El mensaje está incompleto, con valores innesperados o no se puede reconocer. Se le desconectará del servidor");
 		    break;
 	    }
 	}

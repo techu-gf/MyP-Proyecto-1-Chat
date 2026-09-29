@@ -5,6 +5,9 @@ import(
 	"net"
 	"bufio"
 	"strings"
+	"os"
+	"os/signal"
+	"syscall"
 	"encoding/json"
 	"chat/src/main/Modelo/Mensaje"
 )
@@ -46,6 +49,10 @@ func CrearServidor(puertoDado int) *Servidor{
 //busca de aceptar nuevos clientes a la vez que administra los procesos
 //de nuevos usuarios, desconectar usuarios y recibo y envío de datos
 func (serv *Servidor)Iniciar(procesarMensajeFunc func(msg []byte, conn net.Conn, usuario *string) bool) error {
+	sigChan := make(chan os.Signal, 1)
+
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", serv.puerto))
 
 	if err != nil {
@@ -77,6 +84,17 @@ func (serv *Servidor)Iniciar(procesarMensajeFunc func(msg []byte, conn net.Conn,
 			for _, cliente := range serv.usuarios{
 				cliente.conn.Write(datos)
 			}
+
+			case <- sigChan:
+			fmt.Println("\nApagando el servidor.");
+
+			ln.Close()
+			
+			for _, cliente := range serv.usuarios{
+				cliente.conn.Close()
+			}
+
+			os.Exit(0)
 		}
 	}
 }
@@ -86,12 +104,19 @@ func (serv *Servidor)Iniciar(procesarMensajeFunc func(msg []byte, conn net.Conn,
 //por parte del cliente, procesará el mensaje dado y realizará la acción
 //solicitada.
 func (serv *Servidor)ProcesoCliente(conn net.Conn, procesarMensajeFunc func(msg []byte, conn net.Conn, usuario *string) bool){
-	defer conn.Close()
+	var usuario string
+	
+	defer func(){
+		conn.Close()
+
+		if usuario != ""{
+			serv.DesconectarUsuario(usuario)
+		}
+	}()
 	
 	fmt.Printf("Se conectó alguien desde la dirección %s\n", conn.RemoteAddr())
 	
 	scanner := bufio.NewScanner(conn)
-	var usuario string
 	
 	for scanner.Scan(){
 		mensaje := scanner.Bytes()
@@ -99,16 +124,14 @@ func (serv *Servidor)ProcesoCliente(conn net.Conn, procesarMensajeFunc func(msg 
 		procesamientoMensaje := procesarMensajeFunc(mensaje, conn, &usuario)
 
 		if !procesamientoMensaje{
-			return
+			break
 		}
 	}
 	
 	if err := scanner.Err(); err != nil {
-		fmt.Printf("Error leyendo de %s: %v\n", conn.RemoteAddr(), err)
-	}
-	
-	if usuario != "" {
-		serv.DesconectarUsuario(usuario)
+		if !strings.Contains(err.Error(), "use of closed network connection") {
+			fmt.Printf("Error leyendo de %s: %v\n", conn.RemoteAddr(), err)
+		}
 	}
 }
 
@@ -397,7 +420,8 @@ func (serv *Servidor)AgregarUsuarioSala(nombreCuarto, nombreUsuario string) erro
 			respuesta <- fmt.Errorf("No está en la lista de invitados")
 			return
 		}
-		
+
+		delete(cuarto.listaInvitados, nombreUsuario)
 		serv.cuartos[nombreCuarto] = cuarto
 		respuesta <- nil
 

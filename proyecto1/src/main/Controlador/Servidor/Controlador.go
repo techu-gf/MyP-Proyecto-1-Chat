@@ -105,7 +105,7 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 
 		ctrl.OperacionInvalida(conn, "INVALID")
 
-		return true
+		return false
 
 		case "USERS":
 		listaUsuarios := ctrl.serv.VerListaUsuarios()
@@ -136,12 +136,12 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 
 		if len(nombreCuarto) > 16{
 			ctrl.OperacionInvalida(conn, "INVALID")
-			return true
+			return false
 		}
 
 		if strings.TrimSpace(nombreCuarto) == ""{
 			ctrl.OperacionInvalida(conn, "INVALID")
-			return true
+			return false
 		}
 
 		err := ctrl.serv.CrearSala(nombreCuarto, *usuario)
@@ -150,13 +150,13 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 			msgResponseNewRoom := mensaje.CrearMensajeResponse("NEW_ROOM", "ROOM_ALREADY_EXISTS", nombreCuarto)
 			ctrl.EnviarMensaje(msgResponseNewRoom, conn)
 
-			return true;
+			return true
 		}
 
 		msgResponseSuccess := mensaje.CrearMensajeResponse("NEW_ROOM", "SUCCESS", nombreCuarto)
 		ctrl.EnviarMensaje(msgResponseSuccess, conn)
 
-		return true;
+		return true
 
 		case "INVITE":
 		listaInvitados := msgSinJSON.Usernames
@@ -164,7 +164,7 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 
 		if len(listaInvitados) == 0{
 			ctrl.OperacionInvalida(conn, "INVALID")
-			return true
+			return false
 		}
 
 		for _, invitado := range listaInvitados{
@@ -180,13 +180,14 @@ func (ctrl *Controlador)ProcesaMensaje(msg []byte, conn net.Conn, usuario *strin
 				if errS == errorCuarto{
 					msgNoSuchRoom := mensaje.CrearMensajeResponse("INVITE", "NO_SUCH_ROOM", nombreCuarto)
 					ctrl.EnviarMensaje(msgNoSuchRoom, conn)
-					return true;
+					return true
 				}else if errS == errorUsuarioSolicitante{
 					ctrl.OperacionInvalida(conn, "INVALID")
+					return false
 				}else if errS == errorUsuario{
 					msgNoSuchUser := mensaje.CrearMensajeResponse("INVITE", "NO_SUCH_USER", invitado)
 					ctrl.EnviarMensaje(msgNoSuchUser, conn)
-					return true;
+					return true
 				}
 			}
 		}
