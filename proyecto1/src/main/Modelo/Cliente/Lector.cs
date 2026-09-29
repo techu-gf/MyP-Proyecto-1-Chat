@@ -140,55 +140,20 @@ namespace cliente{
 		    return true;
 
 		case "/status":
-		    if(comando.Length < 2){
-			return false;
-		    }
-		    return true;
-		    
 		case "/say":
+		case "/createR":
+		case "/joinR":
+		case "/listR":
+		case "/leaveR":
 		    if(comando.Length < 2){
 			return false;
 		    }
 		    return true;
 		    
 		case "/tell":
-		    if(comando.Length < 3){
-			return false;
-		    }
-		    return true;
-
-		case "/createR":
-		    if(comando.Length < 2){
-			return false;
-		    }
-		    return true;
-
 		case "/addR":
-		    if(comando.Length < 3){
-			return false;
-		    }
-		    return true;
-
-		case "/joinR":
-		    if(comando.Length < 2){
-			return false;
-		    }
-		    return true;
-
-		case "/listR":
-		    if(comando.Length < 2){
-			return false;
-		    }
-		    return true;
-
 		case "/sayR":
 		    if(comando.Length < 3){
-			return false;
-		    }
-		    return true;
-
-		case "/leaveR":
-		    if(comando.Length < 2){
 			return false;
 		    }
 		    return true;
