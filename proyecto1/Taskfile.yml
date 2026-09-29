@@ -8,9 +8,10 @@ tasks:
     silent: true
 
   clean:
-    desc: Elimina archivos de respaldo temporales de Emacs
+    desc: Elimina archivos de respaldo temporales, basura o binarios de compilación
     cmds:
       - find . -type f \( -name "*~" -o -name "#*#" \) -delete
+      - rm -rf src/main/bin src/main/obj Documentacion/auto Documentacion/*.aux Documentacion/*.log- 
     silent: true
 
   cliente:
