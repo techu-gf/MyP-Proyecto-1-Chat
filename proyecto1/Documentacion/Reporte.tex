@@ -1,5 +1,6 @@
 \documentclass{article}
 \usepackage {graphicx}
+\usepackage{float}
 \graphicspath{ {images/} }
 \title{Modelado y Programación, Proyecto 1: Chat}
 \author{Mayté García Franco}
@@ -8,9 +9,15 @@
 
 \maketitle
 
+\section{Resumen}
+
+En este primer proyecto de Modelado y Programación se pidió crear un chat tanto del lado del servidor como del lado del cliente. Este proyecto toma como base el protocolo enviado al inicio del semestre, buscando que tanto el servidor como el cliente no solo sirvan en mi ambiente, sino que también operen con naturalidad con los proyectos del resto de mis compañeros. 
+
 \section{Introducción}
 
-\section{Análisis}
+En este proyecto se tocaron conceptos que no había tocado con anterioridad en la carrera, tales como conectividad y el modelo cliente-servidor. También se aplicó por primera vez, con una mucha mayor consciencia, lo que es la programación concurrente y sistemas de construcción. Otro elementos importante sobre este proyecto es que me forzó a usar lenguajes de programación que nunca había imaginado que usaría, resultando no solo en un conocimiento teórico más amplio, sino en un pequeño pero importante inicio en la ampliación de mis habilidades técnicas. 
+
+\section{Análisis y Diseño}
 
 \subsection{Investigación de Cliente-Servidor}
 El servidor espera la petición del cliente por un puerto específico. Cuando el cliente realice la petición, el servidor abrirá una conexión. Esta petición se hace por un puerto previamente establecido y, en caso de ser aceptada, se crea una conexión donde el servidor y el cliente pueden intercambiar información.
@@ -84,28 +91,50 @@ Para el cliente tendríamos lo siguiente:
   \item Abandonar servidor
 \end{itemize}
 
-\section{Modelado}
-
-\subsection{Paradigma}
-
-Se optó por usar el paradigma de Orientado a Objetos. Este paradigma nos ayudará a tener claras las funciones que llevan a cabo tanto el cliente como el servidor, logrando que lo que haga cada uno no se mezcle. 
-
 \subsection{Diseño de clases}
 
-\includegraphics[scale = 0.3]{Modelado_Chat.jpg}
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.5]{Modelado_Servidor.png}
+    \caption{Diagrama de clases del Servidor.}
+    \label{fig:modelado_servidor}
+  \end{figure}
 
-\subsection{Lenguajes de Programación y Sistemas de Construcción}
+  \begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.5]{Modelado_Cliente.png}
+    \caption{Diagrama de clases del Cliente.}
+    \label{fig:modelado_cliente}
+  \end{figure}
 
-Para este proyecto se decidió programar el servidor en \textbf{Go} debido a la gran ventaja que nos brindan las Gorutines. De igual forma, su recolector de basura ayudará a facilitar el manejo del servidor y los recursos que pueda utilizar.
+  \section{Implementación}
 
-Del lado del cliente se decidió que se programará en \textbf{C#} ya que tiene un recolector de basura que trabaja de forma más ``entendible'' o, desde mi punto de vista, interesante a comparación de C o C++. Otro punto a favor de C# es que se caracteriza por ser orientado a objetos, por lo que me facilitará un poco más la impementación de este.
+Para este proyecto se decidió programar el servidor en \textbf{Go} debido a que es un lenguaje con una implementación ``sencilla'' de concurrencia. De igual forma, su recolector de basura ayudará a facilitar el manejo del servidor y los recursos que pueda utilizar.
+
+Del lado del cliente se decidió que se programará en \textbf{C\#} ya que tiene un recolector de basura que trabaja de forma más ``entendible'' o, desde mi punto de vista, interesante a comparación de C o C++. Otro punto a favor de C\# es que se caracteriza por ser orientado a objetos, por lo que me facilitará un poco más la impementación de este.
 
 En cuanto al sistema de construcción, se usará Taskfile.
 
+\section{Conclusiones}
+
+Fue un proyecto que me resultó desafiante pero bastante entretenido. Manejar los conceptos relacionados a la conectividad fue de lo más complicado para mi en este proyecto ya que me costaba entender como funciona cada uno de los elementos para lograr la comunicación, pero ya terminado el proyecto me siento capaz de decir que ya entiendo aunque sea un poco más como funciona todo esto.
+
+Tenía la idea de que antes de programar cualquier programa considerado ``difícil'' para mí necesitaría un conocimiento profundo del lenguaje, pero con este proyecto caigo en cuenta que no es necesario saberlo todo desde un inicio, mientras uno trabaja más y más con el lenguaje se va acostumbrando automáticamente a él y quizás no pueda ser considerado un experto, pero uno se vuelve capaz de hacer lo necesario para completar lo que necesita. También se me complicó un poco el cambio de paradigma de programación, específicamente con Golang ya que este lenguaje no es específicamente orientado a objetos, por lo que me vi obligada a aunque sea tratar de pensar de forma distinta. Aún así, esto fue divertido. 
+
+Algo en lo que más me hizo autorreflexionar este proyecto fue la gran procrastinación que tengo y que debo arreglarla sí o sí. Este proyecto lo inicié aproximadamente 2 o 3 semanas después de que se mencionó por primera vez. Con ese retraso de semanas me di cuenta que si lo hubiera iniciado apenas pude, seguro hubiera logrado un resultado muchísimo mejor, haciendo que en este momento me sienta arrepentida, pero realmente agradezco que este proyecto me haya abierto los ojos y me haga buscar soluciones para resolver este grave problema de procrastinación.
+
+Ya con este proyecto concluído, tengo como objetivo que para el siguiente proyecto inicie mi análisis y diseño apenas tenga oportunidad, buscando un resultado considerablemente bueno y sólido. También quiero tratar de pensar más como programadora para poder dividir todavía mejor el problema. Siento que justo un problema que tuve en este proyecto es que no conocía en su totalidad lo que implicaba realizar un servidor y un cliente, por lo que no pude dividir de la mejor forma el problema y, en consecuencia, mi diseño inicial es bastante diferente a como resultó.
+
+Para finalizar, quiero destacar que este proyecto no solo me ayudo a poner en práctica mejores formas de programar y a desarrollar más habilidades técnicas, también fue un periodo de autorreflexión en cuanto a mis responsabilidades y cómo quiero mejorar mi forma de crear programas. 
+
 \section{Bibliografía}
-https://repositorio-uapa.cuaed.unam.mx/repositorio/moodle/pluginfile.php/3064/mod_resource/content/1/UAPA-Sockets/index.html
 
-https://onmex.mx/tecnologia-y-desarrollo/que-es-un-socket/
-
+\begin{itemize}
+  \item Universidad Nacional Autónoma de México. (UNAM). (s.f.)  \emph{UAPA - Sockets}. CUAED - UNAM. Recuperado de: \url{https://repositorio-uapa.cuaed.unam.mx/repositorio/moodle/pluginfile.php/3064/mod_resource/content/1/UAPA-Sockets/index.html}
+  \item OnMex. (s.f.). \emph{Qué es un socket}. Tecnología y Desarrollo. Recuperado de: \url{https://onmex.mx/tecnologia-y-desarrollo/que-es-un-socket/}
+  \item Taskfile. (s.f.). \emph{Guide/Documentation}. Taskfile.dev. Recuperado de: \url{https://taskfile.dev/docs/guide}
+  \item Apuntes.de. (s.f.). Apuntes de Golang. Apuntes.de. Recuperado de: https://apuntes.de/golang/#gsc.tab=0
+  \item Microsoft Learn. (s.f.). \emph{Recorrido por C\#}. Microsoft Documentation. Recuperado de: \url{https://learn.microsoft.com/es-es/dotnet/csharp/tour-of-csharp/tutorials/}
+\end{itemize}
 
 \end{document}
